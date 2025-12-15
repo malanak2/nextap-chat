@@ -1,0 +1,34 @@
+CREATE TABLE "User" (
+  "ID" SERIAL PRIMARY KEY,
+  "username" VARCHAR(50) UNIQUE NOT NULL
+);
+
+CREATE TABLE "Message" (
+  "ID" SERIAL PRIMARY KEY,
+  "content" TEXT NOT NULL
+);
+
+CREATE TABLE "Channel" (
+  "ID" SERIAL PRIMARY KEY,
+  "name" VARCHAR(50) UNIQUE NOT NULL
+);
+
+CREATE TABLE "UserMessage" (
+  "ID" SERIAL PRIMARY KEY,
+  "user" INTEGER NOT NULL,
+  "message" INTEGER UNIQUE NOT NULL
+);
+
+CREATE TABLE "MessageChannel" (
+  "ID" SERIAL PRIMARY KEY,
+  "channel" INTEGER NOT NULL,
+  "message" INTEGER UNIQUE NOT NULL
+);
+
+ALTER TABLE "UserMessage" ADD FOREIGN KEY ("user") REFERENCES "User" ("ID");
+
+ALTER TABLE "UserMessage" ADD FOREIGN KEY ("message") REFERENCES "Message" ("ID");
+
+ALTER TABLE "MessageChannel" ADD FOREIGN KEY ("channel") REFERENCES "Channel" ("ID");
+
+ALTER TABLE "MessageChannel" ADD FOREIGN KEY ("message") REFERENCES "Message" ("ID");
