@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,25 +8,26 @@ import (
 
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/gorilla/mux"
-	. "github.com/malanak2/nextap_chat/.gen/chatdb/public/table"
+	. "github.com/malanak2/nextap-chat/.gen/chatdb/public/table"
 
-	"github.com/malanak2/nextap_chat/.gen/chatdb/public/model"
+	"github.com/malanak2/nextap-chat/.gen/chatdb/public/model"
+
+	"github.com/malanak2/nextap-chat/domain"
+	"github.com/malanak2/nextap-chat/handlers"
 )
 
 func handleRoot(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Welcome to the Home Page!")
 }
 
-var db *sql.DB
-
 func handlerUsers(w http.ResponseWriter, r *http.Request) {
 	stmt := SELECT(User.AllColumns).FROM(User)
 	var dest []struct {
 		model.User
 	}
-	err := stmt.Query(db, &dest)
+	err := stmt.Query(domain.Db, &dest)
 	if err != nil {
-		http.Error(w, "Database query error", http.StatusInternalServerError)
+		http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	fmt.Fprintln(w, "Users Page")
@@ -35,8 +35,7 @@ func handlerUsers(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	var connectString = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", os.Getenv("DB_host"), os.Getenv("DB_port"), os.Getenv("DB_user"), os.Getenv("DB_pass"), os.Getenv("DB_name"))
-	err := error(nil)
-	db, err = sql.Open("postgres", connectString)
+	err := domain.InitDb(connectString)
 	if err != nil {
 		panic(err)
 	}
@@ -44,5 +43,6 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", handleRoot).Methods("GET")
 	r.HandleFunc("/users", handlerUsers).Methods("GET")
+	r.HandleFunc("/create-user", handlers.HandleUserCreate).Methods("POST")
 	log.Fatal(http.ListenAndServe(":8080", r))
 }

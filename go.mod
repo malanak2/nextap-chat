@@ -1,4 +1,4 @@
-module github.com/malanak2/nextap_chat
+module github.com/malanak2/nextap-chat
 
 go 1.25.4
 
