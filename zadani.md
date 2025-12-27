@@ -34,23 +34,16 @@ Functional Requirements
 1. Author Management
 
 The system must:
-
-* Create new authors with unique usernames
-* Retrieve a single author by ID
+// TODO: Pagination
 * Retrieve all authors (with pagination support)
 * Update author information (username)
 * Delete authors (cascading delete of all associated messages)
 * Search authors by username (partial match)
-* Validate author input:
-* Username is required
-* Username length: 3-50 characters
-* Username must be unique
 
 2. Message Management
 
 The system must:
 
-* Create new messages linked to an author
 * Retrieve a single message by ID
 * Retrieve all messages (with pagination support)
 * Update message content (cannot change author)
@@ -58,10 +51,6 @@ The system must:
 * Retrieve all messages by a specific author (with pagination)
 * Search messages by content (partial text match)
 * Filter messages by author ID
-* Validate message input:
-* Content is required
-* Content maximum length: 1000 characters
-* Author must exist before creating message
 
 3. Search & Filtering
 

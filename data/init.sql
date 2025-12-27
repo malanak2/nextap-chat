@@ -5,7 +5,7 @@ CREATE TABLE "User" (
 
 CREATE TABLE "Message" (
   "ID" SERIAL PRIMARY KEY,
-  "content" TEXT NOT NULL
+  "content" VARCHAR(1000) NOT NULL
 );
 
 CREATE TABLE "Channel" (

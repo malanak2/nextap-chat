@@ -1,48 +1,51 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 
-	. "github.com/go-jet/jet/v2/postgres"
+	ghandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	. "github.com/malanak2/nextap-chat/.gen/chatdb/public/table"
-
-	"github.com/malanak2/nextap-chat/.gen/chatdb/public/model"
-
 	"github.com/malanak2/nextap-chat/domain"
 	"github.com/malanak2/nextap-chat/handlers"
+	"github.com/swaggo/http-swagger/v2"
 )
 
-func handleRoot(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome to the Home Page!")
-}
+//	@title			Chat app
+//	@version		0.1
+//	@description	Chat application backend
 
-func handlerUsers(w http.ResponseWriter, r *http.Request) {
-	stmt := SELECT(User.AllColumns).FROM(User)
-	var dest []struct {
-		model.User
-	}
-	err := stmt.Query(domain.Db, &dest)
-	if err != nil {
-		http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	fmt.Fprintln(w, "Users Page")
-}
+//	@host		localhost:8080
+//	@BasePath	/
+
+//	@securityDefinitions.basic JWTTokenBasic
 
 func main() {
-	var connectString = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", os.Getenv("DB_host"), os.Getenv("DB_port"), os.Getenv("DB_user"), os.Getenv("DB_pass"), os.Getenv("DB_name"))
-	err := domain.InitDb(connectString)
+	// Init db
+	err := domain.InitDb()
 	if err != nil {
 		panic(err)
 	}
 
+	// Routing
 	r := mux.NewRouter()
-	r.HandleFunc("/", handleRoot).Methods("GET")
-	r.HandleFunc("/users", handlerUsers).Methods("GET")
-	r.HandleFunc("/create-user", handlers.HandleUserCreate).Methods("POST")
-	log.Fatal(http.ListenAndServe(":8080", r))
+
+	// Endpoints
+	r.HandleFunc("/users", handlers.HandleGetAllUsers).Methods("GET")
+	r.HandleFunc("/createUser", handlers.HandleUserCreate).Methods("POST")
+	r.HandleFunc("/login", handlers.HandleUserLogin).Methods("POST")
+	r.HandleFunc("/user/{id}", handlers.HandleGetUserById).Methods("GET")
+	r.PathPrefix("/docs/").Handler(http.StripPrefix("/docs/", http.FileServer(http.Dir("docs"))))
+
+	// Secure endpoints
+	r.Handle("/sendMessage", handlers.JwtMiddleware(http.HandlerFunc(handlers.HandleSendMessage))).Methods("POST")
+
+	// Swagger
+	r.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
+		httpSwagger.URL("http://localhost:" + os.Getenv("port") + "/docs/swagger.json"), //The url pointing to API definition
+	)).Methods("GET")
+
+	loggedRouter := ghandlers.LoggingHandler(os.Stdout, r)
+	log.Fatal(http.ListenAndServe(":"+os.Getenv("port"), loggedRouter))
 }
