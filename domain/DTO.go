@@ -22,3 +22,7 @@ type JwtClaims struct {
 	Username string `json:"username"`
 	jwt.RegisteredClaims
 }
+
+type ChangeUsername struct {
+	Username string
+}

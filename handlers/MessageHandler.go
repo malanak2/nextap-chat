@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/go-jet/jet/v2/postgres"
+	"github.com/gorilla/mux"
 	"github.com/malanak2/nextap-chat/domain"
 	"github.com/malanak2/nextap-chat/gen/chatdb/public/model"
 	. "github.com/malanak2/nextap-chat/gen/chatdb/public/table"
@@ -107,4 +109,38 @@ func HandleSendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprintf(w, "%d", destM.ID)
+}
+
+// HandleGetMessagesByUserId godoc
+//
+// @Summary			 	Messages by user
+// @Description		 	Get all mesages by a user
+// @Tags				message,user
+// @Accept				json
+// @Produce				json
+// @Success				200 {object}	[]model.Message
+// @Failure				400 {object}	string
+// @Failure				500 {object}	string
+// @Router				/user/{id}/messages [post]
+func HandleGetMessagesByUserId(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	uid, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+	stmt := UserMessage.SELECT(UserMessage.AllColumns).WHERE(UserMessage.ID.EQ(postgres.Int(int64(uid))))
+	var destM struct {
+		model.UserMessage
+	}
+	err = stmt.Query(domain.Db, &destM)
+	if err != nil {
+		http.Error(w, "Error selecting from the UserMessage table. Please contact an administrator", http.StatusInternalServerError)
+		return
+	}
+	marshal, err := json.Marshal(destM)
+	if err != nil {
+		http.Error(w, "Error converting  UserMessage table. Please contact an administrator", http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, "%s", marshal)
 }

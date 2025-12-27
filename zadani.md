@@ -36,7 +36,6 @@ Functional Requirements
 The system must:
 // TODO: Pagination
 * Retrieve all authors (with pagination support)
-* Update author information (username)
 * Delete authors (cascading delete of all associated messages)
 * Search authors by username (partial match)
 
@@ -72,9 +71,6 @@ Non-Functional Requirements
 The system must:
 
 * Use environment variables for all configuration
-* Required configuration:
-* Database connection (host, port, user, password, dbname)
-* Server port
 
 2. Database Migrations
 

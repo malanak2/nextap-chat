@@ -36,12 +36,14 @@ func main() {
 	r.HandleFunc("/createUser", handlers.HandleUserCreate).Methods("POST")
 	r.HandleFunc("/login", handlers.HandleUserLogin).Methods("POST")
 	r.HandleFunc("/user/{id}", handlers.HandleGetUserById).Methods("GET")
-	r.PathPrefix("/docs/").Handler(http.StripPrefix("/docs/", http.FileServer(http.Dir("docs"))))
+	r.HandleFunc("/user/{id}/messages", handlers.HandleGetMessagesByUserId).Methods("GET")
 
 	// Secure endpoints
 	r.Handle("/sendMessage", handlers.JwtMiddleware(http.HandlerFunc(handlers.HandleSendMessage))).Methods("POST")
+	r.Handle("/changeUsername", handlers.JwtMiddleware(http.HandlerFunc(handlers.HandleUserChangeName))).Methods("POST")
 
 	// Swagger
+	r.PathPrefix("/docs/").Handler(http.StripPrefix("/docs/", http.FileServer(http.Dir("docs"))))
 	r.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
 		httpSwagger.URL("http://localhost:" + os.Getenv("port") + "/docs/swagger.json"), //The url pointing to API definition
 	)).Methods("GET")

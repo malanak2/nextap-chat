@@ -166,3 +166,50 @@ func HandleGetUserById(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprintf(w, "%s", marshal)
 }
+
+// HandleUserChangeName godoc
+//
+// @Summary			 	Change Username
+// @Description		 	Changes username for the logged-in user
+// @Tags				user
+// @Accept				json
+// @Produce				json
+// @Success				200 {object}	model.User
+// @Failure				400 {object}	string
+// @Failure				500 {object}	string
+// @Security			JWTTokenBasic
+// @Router				/changeUsername [post]
+func HandleUserChangeName(w http.ResponseWriter, r *http.Request) {
+	var body domain.ChangeUsername
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	uid, ok := r.Context().Value("userId").(int)
+	if !ok {
+		// If this happens either the login function gives out a malformed but valid jwt, or somebody has our signing key - not good either way
+		http.Error(w, "Invalid jwt. Please contact a site administrator", http.StatusInternalServerError)
+		return
+	}
+
+	if len(body.Username) > 50 || len(body.Username) < 3 {
+		http.Error(w, "Invalid username", http.StatusBadRequest)
+		return
+	}
+
+	stmtCU := User.UPDATE(User.Username).WHERE(User.ID.EQ(postgres.Int(int64(uid)))).SET(postgres.String(body.Username)).RETURNING(User.AllColumns)
+	var dest struct {
+		model.User
+	}
+	err = stmtCU.Query(domain.Db, &dest)
+	if err != nil {
+		http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	marshal, err := json.Marshal(dest.User)
+	if err != nil {
+		http.Error(w, `Database marshal error `+err.Error(), http.StatusInternalServerError)
+	}
+	fmt.Fprintf(w, "%s", marshal)
+}
