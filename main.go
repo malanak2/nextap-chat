@@ -37,10 +37,17 @@ func main() {
 	r.HandleFunc("/login", handlers.HandleUserLogin).Methods("POST")
 	r.HandleFunc("/user/{id}", handlers.HandleGetUserById).Methods("GET")
 	r.HandleFunc("/user/{id}/messages", handlers.HandleGetMessagesByUserId).Methods("GET")
+	r.HandleFunc("/message/{id}", handlers.HandleGetMessageById).Methods("GET")
+	r.HandleFunc("/message/search/{txt}", handlers.HandleSearchMessages).Methods("GET")
+	r.HandleFunc("/messages", handlers.HandleGetAllMessages).Methods("GET")
+	r.HandleFunc("/user/{id}/delete", handlers.HandleDeleteUser).Methods("DELETE")
+	r.HandleFunc("/user/search/{txt}", handlers.HandleSearchUsers).Methods("GET")
 
 	// Secure endpoints
 	r.Handle("/sendMessage", handlers.JwtMiddleware(http.HandlerFunc(handlers.HandleSendMessage))).Methods("POST")
 	r.Handle("/changeUsername", handlers.JwtMiddleware(http.HandlerFunc(handlers.HandleUserChangeName))).Methods("POST")
+	r.Handle("/message/{id}/update", handlers.JwtMiddleware(http.HandlerFunc(handlers.HandleEditMessageById))).Methods("POST")
+	r.Handle("/message/{id}", handlers.JwtMiddleware(http.HandlerFunc(handlers.HandleDeleteMessageById))).Methods("DELETE")
 
 	// Swagger
 	r.PathPrefix("/docs/").Handler(http.StripPrefix("/docs/", http.FileServer(http.Dir("docs"))))

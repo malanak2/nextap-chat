@@ -34,32 +34,17 @@ Functional Requirements
 1. Author Management
 
 The system must:
-// TODO: Pagination
-* Retrieve all authors (with pagination support)
-* Delete authors (cascading delete of all associated messages)
-* Search authors by username (partial match)
 
 2. Message Management
 
 The system must:
 
-* Retrieve a single message by ID
-* Retrieve all messages (with pagination support)
-* Update message content (cannot change author)
-* Delete individual messages
-* Retrieve all messages by a specific author (with pagination)
-* Search messages by content (partial text match)
-* Filter messages by author ID
 
 3. Search & Filtering
 
 The system must:
 
-* Search messages by content keyword
-* Search authors by username keyword
-* Filter messages by author ID
 * Support case-insensitive search
-* Return results with pagination
 * Use only built-in PostgreSQL functionality for search (no external search engines)
 
 

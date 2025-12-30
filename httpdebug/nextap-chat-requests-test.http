@@ -1,75 +1,92 @@
-@username = user
+@username = Kriket
 @password = pass
 @token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Njk0MzY3MzEsInVzZXJJZCI6MSwidXNlcm5hbWUiOiJ1c2VyIn0.a1rDHul0ueHTSMmqKOwYUcuMv-O1KxXfyVn9xAnp0Ig
+@token2 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Njk1OTY5MjAsInVzZXJJZCI6MywidXNlcm5hbWUiOiJ1c2VyMiJ9.gNnyAgDyNVgXum60VC8ZIbZnsC1FHc44LsVdR0WfSdw
 ### Create user
 POST http://localhost:8080/createUser
+Content-Type: application/json
 
 {
     "username": "{{username}}",
     "password": "{{password}}"
 }
-<> 2025-12-27T140705.200.txt
-<> 2025-12-27T140534.400.txt
 
 ### Login
 POST http://localhost:8080/login
+Content-Type: application/json
 
 {
     "Username":"{{username}}",
     "Password":"{{password}}"
 }
 
+### Send message
+@content = "Ahoj kamarádi"
+@channel = 1
+POST http://localhost:8080/sendMessage
+Content-Type: application/json
+Authorization: Bearer {{token2}}
+
+{
+  "Channel": {{channel}},
+  "Content": {{content}}
+}
+
 ### Change username
 POST http://localhost:8080/changeUsername
 Authorization: Bearer {{token}}
+Content-Type: application/json
 
 {
     "Username":"Andromeda"
 }
 
 ### Get all users
-GET http://localhost:8080/users
-
-<> 2025-12-27T141706.200.txt
-<> 2025-12-27T141508.200.txt
-<> 2025-12-27T141415.200.txt
-<> 2025-12-27T141311.200.txt
-<> 2025-12-27T140857.200.txt
-<> 2025-12-27T102842.200.txt
-<> 2025-12-27T102327.200.txt
-<> 2025-12-27T102230.500.txt
-<> 2025-12-27T102144.500.txt
-<> 2025-12-27T102122.500.txt
-<> 2025-12-27T101630.200.txt
-<> 2025-12-27T100854.200.txt
-<> 2025-12-27T100641.200.txt
-<> 2025-12-27T100602.200.txt
-<> 2025-12-27T100433.200.txt
-<> 2025-12-27T100249.200.txt
-<> 2025-12-27T100239.200.txt
-<> 2025-12-27T095806.200.txt
-<> 2025-12-27T095634.200.txt
+GET http://localhost:8080/users?page=2&limit=1
 
 ### Swagger doc
 GET http://localhost:8080/swagger/index.html
-
-<> 2025-12-27T103250.200.txt
-<> 2025-12-27T103227.200.txt
-<> 2025-12-27T103207.200.txt
-<> 2025-12-27T103141.200.txt
-<> 2025-12-27T103033.200.txt
-<> 2025-12-27T102954.200.txt
 
 ### Get info about user with id {{id}}
 @id = 1
 GET http://localhost:8080/user/{{id}}
 
-<> 2025-12-27T141001.200.txt
-<> 2025-12-27T140952.200.txt
-<> 2025-12-27T140906.200.txt
-<> 2025-12-27T140716.200.txt
-<> 2025-12-27T140525.400.txt
-<> 2025-12-27T140518.400.txt
-
 ### Get all messages by user
-GET http://localhost:8080/user/{{id}}/messages
+GET http://localhost:8080/user/{{id}}/messages?page=2&limit=1
+
+
+### Get message by ID
+@msgId = 1
+GET http://localhost:8080/message/{{msgId}}
+
+### Get all messages
+GET http://localhost:8080/messages?page=3&limit=2
+
+
+### Delete user
+@delId = 3
+DELETE http://localhost:8080/user/{{delId}}/delete
+
+### Search for user
+@searchU = a
+GET http://localhost:8080/user/search/{{searchU}}
+
+### Search for message
+@searchM = ahoj
+GET http://localhost:8080/message/search/{{searchM}}
+
+### Update message
+@msgId2 = 1
+POST http://localhost:8080/message/{{msgId2}}/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "Content": ""
+}
+
+
+### Delete message
+@msgDID = 2
+DELETE http://localhost:8080/message/{{msgDID}}
+Authorization: Bearer {{token}}

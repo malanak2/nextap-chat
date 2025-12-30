@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -27,11 +28,30 @@ import (
 // @Failure				500 {object}	string
 // @Router				/users [get]
 func HandleGetAllUsers(w http.ResponseWriter, r *http.Request) {
-	stmt := User.SELECT(User.ID, User.Username).FROM(User)
+	page := 1
+	limit := 50
+	var err error
+	if r.URL.Query()["limit"] != nil {
+		limit, err = strconv.Atoi(r.URL.Query()["limit"][0])
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
+	if r.URL.Query()["page"] != nil {
+		page, err = strconv.Atoi(r.URL.Query()["page"][0])
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
+	stmt := User.SELECT(User.ID, User.Username).FROM(User).LIMIT(int64(limit)).OFFSET(int64((page - 1) * limit))
 	var dest []struct {
 		model.User
 	}
-	err := stmt.Query(domain.Db, &dest)
+	err = stmt.Query(domain.Db, &dest)
 	if err != nil {
 		http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
 		return
@@ -60,7 +80,7 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&body)
 
 	if err != nil || body.Username == "" || body.Password == "" {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Could not create user with these parameters", http.StatusBadRequest)
 		return
 	}
 	if len(body.Username) < 3 {
@@ -208,6 +228,101 @@ func HandleUserChangeName(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	marshal, err := json.Marshal(dest.User)
+	if err != nil {
+		http.Error(w, `Database marshal error `+err.Error(), http.StatusInternalServerError)
+	}
+	fmt.Fprintf(w, "%s", marshal)
+}
+
+func HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "User id not an integer", http.StatusBadRequest)
+	}
+	// Get all messages for user
+	stmtUserMessage := UserMessage.SELECT(UserMessage.AllColumns).WHERE(UserMessage.User.EQ(postgres.Int(int64(id))))
+	var destUM []struct {
+		model.UserMessage
+	}
+	err = stmtUserMessage.Query(domain.Db, &destUM)
+	if err != nil {
+		if !strings.Contains(err.Error(), "no rows in result set") {
+			http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
+		}
+	}
+	// For every message delete its entry in UserMessage and then delete the message
+	for i := 0; i < len(destUM); i++ {
+		stmtDelUM := UserMessage.DELETE().WHERE(UserMessage.ID.EQ(postgres.Int(int64(destUM[i].ID)))).RETURNING(UserMessage.AllColumns)
+		var destDUM []struct {
+			model.UserMessage
+		}
+		err = stmtDelUM.Query(domain.Db, &destDUM)
+		if err != nil {
+			http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
+		}
+		stmtDelMsg := Message.DELETE().WHERE(Message.ID.EQ(postgres.Int(int64(destUM[i].Message)))).RETURNING(Message.AllColumns)
+		var destDMSG []struct {
+			model.Message
+		}
+		err = stmtDelMsg.Query(domain.Db, &destDMSG)
+		if err != nil {
+			http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
+		}
+	}
+	// Finally, delete user
+	stmtDelUser := User.DELETE().WHERE(User.ID.EQ(postgres.Int(int64(id)))).RETURNING(User.AllColumns)
+	var destDMSG []struct {
+		model.User
+	}
+	err = stmtDelUser.Query(domain.Db, &destDMSG)
+	if err != nil {
+		http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, "User with the id %d was deleted", id)
+}
+
+func HandleSearchUsers(w http.ResponseWriter, r *http.Request) {
+	page := 1
+	limit := 50
+	var err error
+	if r.URL.Query()["limit"] != nil {
+		limit, err = strconv.Atoi(r.URL.Query()["limit"][0])
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
+	if r.URL.Query()["page"] != nil {
+		page, err = strconv.Atoi(r.URL.Query()["page"][0])
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	vars := mux.Vars(r)
+	text, err := url.QueryUnescape(vars["txt"])
+	if err != nil {
+		http.Error(w, "Invalid text", http.StatusBadRequest)
+		return
+	}
+
+	stmtSearch := User.SELECT(User.AllColumns).WHERE(postgres.LOWER(User.Username).LIKE(postgres.LOWER(postgres.String("%" + text + "%")))).LIMIT(int64(limit)).OFFSET(int64((page - 1) * limit))
+	var dest []struct {
+		model.User
+	}
+	fmt.Fprintf(os.Stdout, "Text: %s, Sql: %s", text, stmtSearch.DebugSql())
+	err = stmtSearch.Query(domain.Db, &dest)
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			fmt.Fprintf(w, `[]`)
+			return
+		}
+		http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
+	}
+	marshal, err := json.Marshal(dest)
 	if err != nil {
 		http.Error(w, `Database marshal error `+err.Error(), http.StatusInternalServerError)
 	}

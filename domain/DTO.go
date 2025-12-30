@@ -26,3 +26,7 @@ type JwtClaims struct {
 type ChangeUsername struct {
 	Username string
 }
+
+type EditMessage struct {
+	Content string
+}
