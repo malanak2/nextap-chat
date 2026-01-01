@@ -56,7 +56,7 @@ GET http://localhost:8080/user/{{id}}/messages?page=2&limit=1
 
 
 ### Get message by ID
-@msgId = 1
+@msgId = 3
 GET http://localhost:8080/message/{{msgId}}
 
 ### Get all messages

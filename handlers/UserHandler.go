@@ -313,7 +313,6 @@ func HandleSearchUsers(w http.ResponseWriter, r *http.Request) {
 	var dest []struct {
 		model.User
 	}
-	fmt.Fprintf(os.Stdout, "Text: %s, Sql: %s", text, stmtSearch.DebugSql())
 	err = stmtSearch.Query(domain.Db, &dest)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
