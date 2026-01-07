@@ -12,23 +12,10 @@
   - port
   - JWT_SECRET
 
-# Endpoints quick commands
+## TODO
 
-Create User
-```shell
-curl --header "Content-Type: application/json" --request POST --data "{\"Username\":\"username\",\"password\":\"password\"}" http://localhost:8080/create-user
-```
-
-Login
-```shell
-curl --header "Content-Type: application/json" --request POST --data "{\"Username\":\"username\",\"password\":\"password\"}" http://localhost:8080/login
-```
-
-Send message
-```shell
-curl --header "Content-Type: application/json" --header "Authorization: Bearer token" --request POST --data  http://localhost:8080/sendMessage
-```
-
-
-
-# 
+- Add missing swagger commands
+- Goose migrations
+- Ports + migrations
+- In docker verify gen exists?
+- Clean up code + comments
