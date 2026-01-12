@@ -16,7 +16,7 @@ services:
   service:
    image: nextap-chat:latest
    ports:
-     - "8080:8080"
+     - "8081:8081"
    environment:
      DB_host: db
      DB_name: chatdb
@@ -24,6 +24,6 @@ services:
      DB_port: 5432
      DB_user: program
      JWT_SECRET: secret
-     port: 8080
+     port: 8081
    depends_on:
      - db
