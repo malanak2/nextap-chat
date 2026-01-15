@@ -1,4 +1,3 @@
-
 ========Task 2 Chat - Project Requirements
 Project Overview
 
@@ -61,11 +60,6 @@ The system must:
 
 The system must:
 
-* Use goose for database migrations
-* Version all database schema changes
-* Create migration files for all schema modifications
-* Ensure migrations can be applied incrementally
-
 3. Logging
 
 The system must:
@@ -77,8 +71,6 @@ The system must:
 The system must:
 
 * Validate all input data
-* Prevent SQL injection (using parameterized queries)
-* Sanitize user input before storage
 
 5. Code Quality
 

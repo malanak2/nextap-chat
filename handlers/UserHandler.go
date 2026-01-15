@@ -16,6 +16,7 @@ import (
 	"github.com/malanak2/nextap-chat/domain"
 	"github.com/malanak2/nextap-chat/gen/chatdb/public/model"
 	. "github.com/malanak2/nextap-chat/gen/chatdb/public/table"
+	"github.com/malanak2/nextap-chat/ports"
 )
 
 // HandleGetAllUsers godoc
@@ -86,23 +87,12 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request) {
 	if len(body.Username) < 3 {
 		http.Error(w, "Username needs to have at least 3 characters.", http.StatusBadRequest)
 	}
-	// TODO: validate password to match expectation
-	stmt := User.INSERT(User.Username).VALUES(
-		body.Username,
-	).RETURNING(User.AllColumns)
-	var dest struct {
-		model.User
-	}
-	err = stmt.Query(domain.Db, &dest)
+	user, err := ports.CreateUser(body.Username, body.Password)
 	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key value violates unique constraint \"User_username_key\"") {
-			http.Error(w, "A user with this username already exists.", http.StatusBadRequest)
-			return
-		}
-		http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	marshal, err := json.Marshal(dest.User)
+	marshal, err := json.Marshal(user)
 	if err != nil {
 		http.Error(w, `Database marshal error `+err.Error(), http.StatusInternalServerError)
 		return
@@ -149,14 +139,14 @@ func HandleUserLogin(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, `Database marshal error `+err.Error(), http.StatusInternalServerError)
 	}
-	fmt.Fprintf(w, string(marshal))
+	fmt.Fprintf(w, "%s", string(marshal))
 }
 
 // HandleGetUserById godoc
 //
 // @Summary			 	Get user by id
-// @Description		 	Gets a user by id and returns their id and username
-// @Tags				user
+// @Description	 	Gets a user by id and returns their id and username
+// @Tags					user
 // @Produce				json
 // @Success				200 {object}	model.User
 // @Failure				400 {object}	string
@@ -282,6 +272,16 @@ func HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprintf(w, "User with the id %d was deleted", id)
 }
+
+// HandleSearchUsers godoc
+//
+// @Summary			 	Search users
+// @Description		 	Search from the database for a user with a string in name
+// @Tags				user
+// @Produce				json
+// @Success				200 {object}	[]model.User
+// @Failure				500 {object}	string
+// @Router				/users/search/{txt} [get]
 
 func HandleSearchUsers(w http.ResponseWriter, r *http.Request) {
 	page := 1

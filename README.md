@@ -15,7 +15,14 @@
 ## TODO
 
 - Add missing swagger commands
-- Goose migrations
 - Ports + migrations
 - In docker verify gen exists?
 - Clean up code + comments
+
+- Ports -> Datazale
+
+- Usecases -> email, notifikace, obecne proste akce
+- Handlers -> Akorat handlery, convert na system wide veci, validace etc., volani usecases
+-  Json
+  -  https://go.dev/blog/slog
+

@@ -173,6 +173,18 @@ func HandleGetMessagesByUserId(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", marshal)
 }
 
+// HandleGetMessageById godoc
+//
+// @Summary		 		Get a messages
+// @Description 	Returns a
+// @Tags					message
+// @Accept				json
+// @Produce				json
+// @Success				200 {object}	[]model.Message
+// @Failure				400 {object}	string
+// @Failure				500 {object}	string
+// @Security			JWTTokenBasic
+// @Router				/messages [get]
 func HandleGetMessageById(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -205,6 +217,18 @@ func HandleGetMessageById(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", marshal)
 }
 
+// HandleGetAllMessages godoc
+//
+// @Summary		 		Get all messages
+// @Description 	Returns all messages sent on server
+// @Tags					message
+// @Accept				json
+// @Produce				json
+// @Success				200 {object}	[]model.Message
+// @Failure				400 {object}	string
+// @Failure				500 {object}	string
+// @Security			JWTTokenBasic
+// @Router				/messages [get]
 func HandleGetAllMessages(w http.ResponseWriter, r *http.Request) {
 	page := 1
 	limit := 50
@@ -240,6 +264,18 @@ func HandleGetAllMessages(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", marshal)
 }
 
+// HandleSearchMessages godoc
+//
+// @Summary		 		Search messages
+// @Description 	Search for a message by id
+// @Tags					message
+// @Accept				json
+// @Produce				json
+// @Success				200 {object}	model.Message
+// @Failure				400 {object}	string
+// @Failure				500 {object}	string
+// @Security			JWTTokenBasic
+// @Router				/message/search/{txt} [post]
 func HandleSearchMessages(w http.ResponseWriter, r *http.Request) {
 	page := 1
 	limit := 50
@@ -286,6 +322,18 @@ func HandleSearchMessages(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", marshal)
 }
 
+// HandleEditMessage godoc
+//
+// @Summary		 		Edit a message
+// @Description 	Edits a message by id
+// @Tags					message
+// @Accept				json
+// @Produce				json
+// @Success				200 {object}	model.Message
+// @Failure				400 {object}	string
+// @Failure				500 {object}	string
+// @Security			JWTTokenBasic
+// @Router				/message/{id}/update [post]
 func HandleEditMessageById(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -321,6 +369,18 @@ func HandleEditMessageById(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", marshal)
 }
 
+// HandleDeleteMessage godoc
+//
+// @Summary		 		Deletes a message
+// @Description 	Delete a message by id
+// @Tags					message
+// @Accept				json
+// @Produce				json
+// @Success				200 {object}	model.Message
+// @Failure				400 {object}	string
+// @Failure				500 {object}	string
+// @Security			JWTTokenBasic
+// @Router				/message [delete]
 func HandleDeleteMessageById(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
