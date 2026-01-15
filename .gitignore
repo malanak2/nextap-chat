@@ -2,3 +2,4 @@ gen
 .idea
 docs
 build
+.gen
