@@ -36,12 +36,12 @@ func main() {
 	r.HandleFunc("/createUser", handlers.HandleUserCreate).Methods("POST")
 	r.HandleFunc("/login", handlers.HandleUserLogin).Methods("POST")
 	r.HandleFunc("/user/{id}", handlers.HandleGetUserById).Methods("GET")
+	r.HandleFunc("/user/{id}", handlers.HandleDeleteUser).Methods("DELETE")
+	r.HandleFunc("/user/search/{txt}", handlers.HandleSearchUsers).Methods("GET")
 	r.HandleFunc("/user/{id}/messages", handlers.HandleGetMessagesByUserId).Methods("GET")
 	r.HandleFunc("/message/{id}", handlers.HandleGetMessageById).Methods("GET")
 	r.HandleFunc("/message/search/{txt}", handlers.HandleSearchMessages).Methods("GET")
 	r.HandleFunc("/messages", handlers.HandleGetAllMessages).Methods("GET")
-	r.HandleFunc("/user/{id}/delete", handlers.HandleDeleteUser).Methods("DELETE")
-	r.HandleFunc("/user/search/{txt}", handlers.HandleSearchUsers).Methods("GET")
 
 	// Secure endpoints
 	r.Handle("/sendMessage", handlers.JwtMiddleware(http.HandlerFunc(handlers.HandleSendMessage))).Methods("POST")
