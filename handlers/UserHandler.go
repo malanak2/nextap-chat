@@ -160,15 +160,12 @@ func HandleGetUserById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stmtAuthor := User.SELECT(User.AllColumns).WHERE(User.ID.EQ(postgres.Int(int64(id))))
-	var dest struct {
-		model.User
-	}
-	err = stmtAuthor.Query(domain.Db, &dest)
+	dest, err := ports.GetUserById(int32(id))
 	if err != nil {
-		http.Error(w, "No user with this id", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	marshal, err := json.Marshal(dest.User)
 	if err != nil {
 		http.Error(w, `Database marshal error `+err.Error(), http.StatusInternalServerError)
@@ -208,20 +205,13 @@ func HandleUserChangeName(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stmtCU := User.UPDATE(User.Username).WHERE(User.ID.EQ(postgres.Int(int64(uid)))).SET(postgres.String(body.Username)).RETURNING(User.AllColumns)
-	var dest struct {
-		model.User
-	}
-	err = stmtCU.Query(domain.Db, &dest)
+	err = ports.ChangeUsername(int32(uid), body.Username)
+
 	if err != nil {
 		http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	marshal, err := json.Marshal(dest.User)
-	if err != nil {
-		http.Error(w, `Database marshal error `+err.Error(), http.StatusInternalServerError)
-	}
-	fmt.Fprintf(w, "%s", marshal)
+	fmt.Fprintf(w, "OK")
 }
 
 func HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
@@ -230,44 +220,9 @@ func HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "User id not an integer", http.StatusBadRequest)
 	}
-	// Get all messages for user
-	stmtUserMessage := UserMessage.SELECT(UserMessage.AllColumns).WHERE(UserMessage.User.EQ(postgres.Int(int64(id))))
-	var destUM []struct {
-		model.UserMessage
-	}
-	err = stmtUserMessage.Query(domain.Db, &destUM)
+	err = ports.DeleteUser(int32(id))
 	if err != nil {
-		if !strings.Contains(err.Error(), "no rows in result set") {
-			http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
-		}
-	}
-	// For every message delete its entry in UserMessage and then delete the message
-	for i := 0; i < len(destUM); i++ {
-		stmtDelUM := UserMessage.DELETE().WHERE(UserMessage.ID.EQ(postgres.Int(int64(destUM[i].ID)))).RETURNING(UserMessage.AllColumns)
-		var destDUM []struct {
-			model.UserMessage
-		}
-		err = stmtDelUM.Query(domain.Db, &destDUM)
-		if err != nil {
-			http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
-		}
-		stmtDelMsg := Message.DELETE().WHERE(Message.ID.EQ(postgres.Int(int64(destUM[i].Message)))).RETURNING(Message.AllColumns)
-		var destDMSG []struct {
-			model.Message
-		}
-		err = stmtDelMsg.Query(domain.Db, &destDMSG)
-		if err != nil {
-			http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
-		}
-	}
-	// Finally, delete user
-	stmtDelUser := User.DELETE().WHERE(User.ID.EQ(postgres.Int(int64(id)))).RETURNING(User.AllColumns)
-	var destDMSG []struct {
-		model.User
-	}
-	err = stmtDelUser.Query(domain.Db, &destDMSG)
-	if err != nil {
-		http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
+		http.Error(w, `Database delete error `+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	fmt.Fprintf(w, "User with the id %d was deleted", id)
@@ -308,19 +263,16 @@ func HandleSearchUsers(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid text", http.StatusBadRequest)
 		return
 	}
-
-	stmtSearch := User.SELECT(User.AllColumns).WHERE(postgres.LOWER(User.Username).LIKE(postgres.LOWER(postgres.String("%" + text + "%")))).LIMIT(int64(limit)).OFFSET(int64((page - 1) * limit))
-	var dest []struct {
-		model.User
-	}
-	err = stmtSearch.Query(domain.Db, &dest)
+	dest, err := ports.SearchUsers(text, limit, page)
 	if err != nil {
+		// Empty result
 		if strings.Contains(err.Error(), "no rows in result set") {
 			fmt.Fprintf(w, `[]`)
 			return
 		}
 		http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
 	}
+
 	marshal, err := json.Marshal(dest)
 	if err != nil {
 		http.Error(w, `Database marshal error `+err.Error(), http.StatusInternalServerError)

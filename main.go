@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -27,6 +28,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// Logging
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 
 	// Routing
 	r := mux.NewRouter()
