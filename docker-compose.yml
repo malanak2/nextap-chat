@@ -5,8 +5,6 @@ services:
       POSTGRES_USER: program
       POSTGRES_PASSWORD: Password123
       POSTGRES_DB: chatdb
-    ports:
-      - "5432:5432"
   adminer:
     image: adminer
     ports:
