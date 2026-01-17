@@ -14,6 +14,13 @@
 
 ## Before building
 
+### Generate db types
+Make sure the db is up and up to date!
+```shell
+go install github.com/go-jet/jet/v2/cmd/jet@latest
+jet -dsn=postgresql://user:pass@localhost:5432/jetdb?sslmode=disable -schema=chatdb -path=./gen
+```
+
 ### Generate docs
 
 ```shell
