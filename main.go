@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 
-	ghandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/malanak2/nextap-chat/domain"
 	"github.com/malanak2/nextap-chat/handlers"
@@ -40,7 +39,6 @@ func main() {
 	r.HandleFunc("/createUser", handlers.HandleUserCreate).Methods("POST")
 	r.HandleFunc("/login", handlers.HandleUserLogin).Methods("POST")
 	r.HandleFunc("/user/{id}", handlers.HandleGetUserById).Methods("GET")
-	r.HandleFunc("/user/{id}", handlers.HandleDeleteUser).Methods("DELETE")
 	r.HandleFunc("/user/search/{txt}", handlers.HandleSearchUsers).Methods("GET")
 	r.HandleFunc("/user/{id}/messages", handlers.HandleGetMessagesByUserId).Methods("GET")
 	r.HandleFunc("/message/{id}", handlers.HandleGetMessageById).Methods("GET")
@@ -48,6 +46,7 @@ func main() {
 	r.HandleFunc("/messages", handlers.HandleGetAllMessages).Methods("GET")
 
 	// Secure endpoints
+	r.Handle("/user/{id}", handlers.JwtMiddleware(http.HandlerFunc(handlers.HandleDeleteUser))).Methods("DELETE")
 	r.Handle("/sendMessage", handlers.JwtMiddleware(http.HandlerFunc(handlers.HandleSendMessage))).Methods("POST")
 	r.Handle("/changeUsername", handlers.JwtMiddleware(http.HandlerFunc(handlers.HandleUserChangeName))).Methods("POST")
 	r.Handle("/message/{id}/update", handlers.JwtMiddleware(http.HandlerFunc(handlers.HandleEditMessageById))).Methods("POST")
@@ -59,6 +58,5 @@ func main() {
 		httpSwagger.URL("http://localhost:" + os.Getenv("port") + "/docs/swagger.json"), //The url pointing to API definition
 	)).Methods("GET")
 
-	loggedRouter := ghandlers.LoggingHandler(os.Stdout, r)
-	log.Fatal(http.ListenAndServe(":"+os.Getenv("port"), loggedRouter))
+	log.Fatal(http.ListenAndServe(":"+os.Getenv("port"), r))
 }

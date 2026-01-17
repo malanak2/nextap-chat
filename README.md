@@ -12,17 +12,24 @@
   - port
   - JWT_SECRET
 
+## Before building
+
+### Generate docs
+
+```shell
+go install github.com/swaggo/swag/cmd/swag@latest
+swag init
+```
+
 ## TODO
 
-- Add missing swagger commands
-- Ports + migrations
 - In docker verify gen exists?
 - Clean up code + comments
 
-- Ports -> Datazale
-
+## Dev
+- Ports -> Database
 - Usecases -> email, notifikace, obecne proste akce
 - Handlers -> Akorat handlery, convert na system wide veci, validace etc., volani usecases
--  Json
+- Json
   -  https://go.dev/blog/slog
 

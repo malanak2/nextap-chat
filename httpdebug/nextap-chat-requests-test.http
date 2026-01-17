@@ -1,6 +1,6 @@
 @username = Kriket
 @password = pass
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Njk0MzY3MzEsInVzZXJJZCI6MSwidXNlcm5hbWUiOiJ1c2VyIn0.a1rDHul0ueHTSMmqKOwYUcuMv-O1KxXfyVn9xAnp0Ig
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzEyMzQ3MjQsInVzZXJJZCI6MSwidXNlcm5hbWUiOiJLcmlrZXQifQ.45n-Mo0Hz56J0JR5iT3nxmhEXoYLtpqAb6YIGdvi3MQ
 @token2 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Njk1OTY5MjAsInVzZXJJZCI6MywidXNlcm5hbWUiOiJ1c2VyMiJ9.gNnyAgDyNVgXum60VC8ZIbZnsC1FHc44LsVdR0WfSdw
 ### Create user
 POST http://localhost:8080/createUser
@@ -25,7 +25,7 @@ Content-Type: application/json
 @channel = 1
 POST http://localhost:8080/sendMessage
 Content-Type: application/json
-Authorization: Bearer {{token2}}
+Authorization: Bearer {{token}}
 
 {
   "Channel": {{channel}},
@@ -42,7 +42,7 @@ Content-Type: application/json
 }
 
 ### Get all users
-GET http://localhost:8080/users?page=2&limit=1
+GET http://localhost:8080/users?page=1&limit=1
 
 ### Swagger doc
 GET http://localhost:8080/swagger/index.html
@@ -52,27 +52,27 @@ GET http://localhost:8080/swagger/index.html
 GET http://localhost:8080/user/{{id}}
 
 ### Get all messages by user
-GET http://localhost:8080/user/{{id}}/messages?page=2&limit=1
+GET http://localhost:8080/user/{{id}}/messages?page=1&limit=1
 
 
 ### Get message by ID
-@msgId = 3
+@msgId = 1
 GET http://localhost:8080/message/{{msgId}}
 
 ### Get all messages
-GET http://localhost:8080/messages?page=3&limit=2
+GET http://localhost:8080/messages?page=1&limit=1
 
 
 ### Delete user
-@delId = 3
-DELETE http://localhost:8080/user/{{delId}}/delete
+@delId = 1
+DELETE http://localhost:8080/user/{{delId}}
 
 ### Search for user
 @searchU = a
 GET http://localhost:8080/user/search/{{searchU}}
 
 ### Search for message
-@searchM = ahoj
+@searchM = kama
 GET http://localhost:8080/message/search/{{searchM}}
 
 ### Update message
@@ -82,11 +82,11 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "Content": ""
+  "Content": "Sbohem kamarádi"
 }
 
 
 ### Delete message
-@msgDID = 2
+@msgDID = 1
 DELETE http://localhost:8080/message/{{msgDID}}
 Authorization: Bearer {{token}}

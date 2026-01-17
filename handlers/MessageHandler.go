@@ -5,15 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
-	"strings"
 
-	"github.com/go-jet/jet/v2/postgres"
 	"github.com/gorilla/mux"
 	"github.com/malanak2/nextap-chat/domain"
 	"github.com/malanak2/nextap-chat/gen/chatdb/public/model"
 	. "github.com/malanak2/nextap-chat/gen/chatdb/public/table"
+	"github.com/malanak2/nextap-chat/ports"
 )
 
 // HandleSendMessage godoc
@@ -44,7 +42,7 @@ func HandleSendMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify channel and user both exist
-	stmtS := Channel.SELECT(Channel.AllColumns).WHERE(Channel.ID.EQ(postgres.Int(int64(body.Channel))))
+	/*stmtS := Channel.SELECT(Channel.AllColumns).WHERE(Channel.ID.EQ(postgres.Int(int64(body.Channel))))
 	var destC struct {
 		model.Channel
 	}
@@ -52,15 +50,11 @@ func HandleSendMessage(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "No channel with that id", http.StatusBadRequest)
 		return
-	}
-	stmtS = User.SELECT(User.AllColumns).WHERE(User.ID.EQ(postgres.Int(int64(uid))))
-	var destU struct {
-		model.Channel
-	}
-	err = stmtS.Query(domain.Db, &destU)
-	if err != nil {
-		http.Error(w, "No user with that id", http.StatusBadRequest)
-		fmt.Fprintln(os.Stderr, "User with invalid ID found - probably fine though", err)
+	}*/
+	uExists, err := ports.UserExists(uid)
+
+	if !uExists {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -76,17 +70,6 @@ func HandleSendMessage(w http.ResponseWriter, r *http.Request) {
 
 	// Insert message
 
-	stmt := Message.INSERT(Message.Content).VALUES(postgres.String(body.Content)).RETURNING(Message.ID)
-
-	var destM struct {
-		model.Message
-	}
-	err = stmt.Query(domain.Db, &destM)
-	if err != nil {
-		http.Error(w, "Error inserting into the message table. Message too long?", http.StatusBadRequest)
-		return
-	}
-
 	// If in spec later handle it
 	// Insert into message channel table
 	/*stmt = MessageChannel.INSERT(MessageChannel.Channel, MessageChannel.Message).VALUES(body.Channel, destM.ID).RETURNING(MessageChannel.ID)
@@ -99,19 +82,12 @@ func HandleSendMessage(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(os.Stderr, "Error inserting into the MessageChannel table:", err)
 		return
 	}*/
-
-	// Insert into user message table
-	stmt = UserMessage.INSERT(UserMessage.User, UserMessage.Message).VALUES(uid, destM.Message.ID).RETURNING(UserMessage.AllColumns)
-	var destUM struct {
-		model.UserMessage
-	}
-	err = stmt.Query(domain.Db, &destUM)
+	msg, err := ports.SendMessage(body.Content, uid)
 	if err != nil {
-		http.Error(w, "Error inserting into the UserMessage table. Please contact an administrator", http.StatusInternalServerError)
-		fmt.Fprintln(os.Stderr, "Error inserting into the UserMessage table:", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	fmt.Fprintf(w, "%d", destM.ID)
+	fmt.Fprintf(w, "%d", msg.ID)
 }
 
 // HandleGetMessagesByUserId godoc
@@ -149,22 +125,7 @@ func HandleGetMessagesByUserId(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	stmt := UserMessage.SELECT(UserMessage.Message).WHERE(UserMessage.User.EQ(postgres.Int(int64(uid)))).LIMIT(int64(limit)).OFFSET(int64((page - 1) * limit))
-
-	var destM []struct {
-		model.UserMessage
-	}
-
-	err = stmt.Query(domain.Db, &destM)
-
-	if err != nil {
-		if strings.Contains(err.Error(), "no rows in result") {
-			fmt.Fprintf(w, "No messages from user with the id of %d", uid)
-			return
-		}
-		http.Error(w, "Error selecting from the UserMessage table. Please contact an administrator. "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+	destM, err := ports.SelectMessagesByUserId(uid, limit, page)
 	marshal, err := json.Marshal(destM)
 	if err != nil {
 		http.Error(w, "Error converting  UserMessage table. Please contact an administrator. "+err.Error(), http.StatusInternalServerError)
@@ -176,15 +137,15 @@ func HandleGetMessagesByUserId(w http.ResponseWriter, r *http.Request) {
 // HandleGetMessageById godoc
 //
 // @Summary		 		Get a messages
-// @Description 	Returns a
-// @Tags					message
+// @Description 		Returns a
+// @Tags				message
 // @Accept				json
 // @Produce				json
 // @Success				200 {object}	[]model.Message
 // @Failure				400 {object}	string
 // @Failure				500 {object}	string
 // @Security			JWTTokenBasic
-// @Router				/messages [get]
+// @Router				/message/{id} [get]
 func HandleGetMessageById(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -192,27 +153,15 @@ func HandleGetMessageById(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 
-	stmt := postgres.SELECT(Message.AllColumns, User.AllColumns).WHERE(Message.ID.EQ(postgres.Int(int64(id)))).FROM(Message.INNER_JOIN(UserMessage, Message.ID.EQ(UserMessage.Message)).INNER_JOIN(User, UserMessage.User.EQ(User.ID)))
-
-	var destM struct {
-		model.Message
-		Author struct {
-			model.User
-		}
-	}
-
-	err = stmt.Query(domain.Db, &destM)
-
+	destM, err := ports.SelectMessageById(id)
 	if err != nil {
-		if strings.Contains(err.Error(), "no rows in result") {
-			fmt.Fprintf(w, "No messages with the id %d", id)
-		}
-		http.Error(w, "Error selecting from the Message table. Please contact an administrator. "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
-
 	marshal, err := json.Marshal(destM)
 	if err != nil {
 		http.Error(w, "Error converting  Message table. Please contact an administrator. "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	fmt.Fprintf(w, "%s", marshal)
 }
@@ -220,8 +169,8 @@ func HandleGetMessageById(w http.ResponseWriter, r *http.Request) {
 // HandleGetAllMessages godoc
 //
 // @Summary		 		Get all messages
-// @Description 	Returns all messages sent on server
-// @Tags					message
+// @Description 		Returns all messages sent on server
+// @Tags				message
 // @Accept				json
 // @Produce				json
 // @Success				200 {object}	[]model.Message
@@ -267,8 +216,8 @@ func HandleGetAllMessages(w http.ResponseWriter, r *http.Request) {
 // HandleSearchMessages godoc
 //
 // @Summary		 		Search messages
-// @Description 	Search for a message by id
-// @Tags					message
+// @Description 		Search for a message by id
+// @Tags				message
 // @Accept				json
 // @Produce				json
 // @Success				200 {object}	model.Message
@@ -302,31 +251,19 @@ func HandleSearchMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stmtSearch := Message.SELECT(Message.AllColumns).WHERE(postgres.LOWER(Message.Content).LIKE(postgres.LOWER(postgres.String("%" + text + "%")))).LIMIT(int64(limit)).OFFSET(int64((page - 1) * limit))
-	var dest []struct {
-		model.Message
-	}
-	fmt.Fprintf(os.Stdout, "Text: %s, Sql: %s", text, stmtSearch.DebugSql())
-	err = stmtSearch.Query(domain.Db, &dest)
-	if err != nil {
-		if strings.Contains(err.Error(), "no rows in result set") {
-			fmt.Fprintf(w, `[]`)
-			return
-		}
-		http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
-	}
-	marshal, err := json.Marshal(dest)
+	msgs, err := ports.SelectMessagesByContent(text, limit, page)
+	marshal, err := json.Marshal(msgs)
 	if err != nil {
 		http.Error(w, `Database marshal error `+err.Error(), http.StatusInternalServerError)
 	}
 	fmt.Fprintf(w, "%s", marshal)
 }
 
-// HandleEditMessage godoc
+// HandleEditMessageById godoc
 //
 // @Summary		 		Edit a message
-// @Description 	Edits a message by id
-// @Tags					message
+// @Description 		Edits a message by id
+// @Tags				message
 // @Accept				json
 // @Produce				json
 // @Success				200 {object}	model.Message
@@ -354,13 +291,17 @@ func HandleEditMessageById(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Content too long", http.StatusBadRequest)
 		return
 	}
-	stmt := Message.UPDATE(Message.Content).WHERE(Message.ID.EQ(postgres.Int(int64(id)))).SET(postgres.String(body.Content)).RETURNING(Message.AllColumns)
-	var destM struct {
-		model.Message
+	msgExists, err := ports.MessageExists(id)
+	if !msgExists {
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		http.Error(w, "Error with this id does not exist", http.StatusBadRequest)
 	}
-	err = stmt.Query(domain.Db, &destM)
+	destM, err := ports.UpdateMessageById(id, body.Content)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 	marshal, err := json.Marshal(destM)
 	if err != nil {
@@ -369,14 +310,14 @@ func HandleEditMessageById(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", marshal)
 }
 
-// HandleDeleteMessage godoc
+// HandleDeleteMessageById godoc
 //
 // @Summary		 		Deletes a message
-// @Description 	Delete a message by id
-// @Tags					message
+// @Description 		Delete a message by id
+// @Tags				message
 // @Accept				json
 // @Produce				json
-// @Success				200 {object}	model.Message
+// @Success				200
 // @Failure				400 {object}	string
 // @Failure				500 {object}	string
 // @Security			JWTTokenBasic
@@ -387,35 +328,9 @@ func HandleDeleteMessageById(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	stmtDUM := UserMessage.DELETE().WHERE(UserMessage.Message.EQ(postgres.Int(int64(id)))).RETURNING(UserMessage.AllColumns)
-	var destDUM struct {
-		model.UserMessage
-	}
-	err = stmtDUM.Query(domain.Db, &destDUM)
+	err = ports.DeleteMessage(id)
 	if err != nil {
-		if strings.Contains(err.Error(), "no rows in result set") {
-			http.Error(w, "No message with this id", http.StatusBadRequest)
-			return
-		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	stmt := Message.DELETE().WHERE(Message.ID.EQ(postgres.Int(int64(id)))).RETURNING(Message.AllColumns)
-	var destM struct {
-		model.Message
-	}
-	err = stmt.Query(domain.Db, &destM)
-	if err != nil {
-		if strings.Contains(err.Error(), "no rows in result set") {
-			http.Error(w, "No message with this id", http.StatusBadRequest)
-			return
-		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	marshal, err := json.Marshal(destM)
-	if err != nil {
-		http.Error(w, "Error converting  Message table. Please contact an administrator.", http.StatusInternalServerError)
-	}
-	fmt.Fprintf(w, "%s", marshal)
+	fmt.Fprintf(w, "Message deleted")
 }
