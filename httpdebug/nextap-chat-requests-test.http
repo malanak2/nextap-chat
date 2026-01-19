@@ -1,0 +1,92 @@
+@username = Kriket
+@password = pass
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzEyMzQ3MjQsInVzZXJJZCI6MSwidXNlcm5hbWUiOiJLcmlrZXQifQ.45n-Mo0Hz56J0JR5iT3nxmhEXoYLtpqAb6YIGdvi3MQ
+@token2 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Njk1OTY5MjAsInVzZXJJZCI6MywidXNlcm5hbWUiOiJ1c2VyMiJ9.gNnyAgDyNVgXum60VC8ZIbZnsC1FHc44LsVdR0WfSdw
+### Create user
+POST http://localhost:8080/createUser
+Content-Type: application/json
+
+{
+    "username": "{{username}}",
+    "password": "{{password}}"
+}
+
+### Login
+POST http://localhost:8080/login
+Content-Type: application/json
+
+{
+    "Username":"{{username}}",
+    "Password":"{{password}}"
+}
+
+### Send message
+@content = "Ahoj kamarádi"
+@channel = 1
+POST http://localhost:8080/sendMessage
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "Channel": {{channel}},
+  "Content": {{content}}
+}
+
+### Change username
+POST http://localhost:8080/changeUsername
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "Username":"Andromeda"
+}
+
+### Get all users
+GET http://localhost:8080/users?page=1&limit=1
+
+### Swagger doc
+GET http://localhost:8080/swagger/index.html
+
+### Get info about user with id {{id}}
+@id = 1
+GET http://localhost:8080/user/{{id}}
+
+### Get all messages by user
+GET http://localhost:8080/user/{{id}}/messages?page=1&limit=1
+
+
+### Get message by ID
+@msgId = 1
+GET http://localhost:8080/message/{{msgId}}
+
+### Get all messages
+GET http://localhost:8080/messages?page=1&limit=1
+
+
+### Delete user
+@delId = 1
+DELETE http://localhost:8080/user/{{delId}}
+
+### Search for user
+@searchU = a
+GET http://localhost:8080/user/search/{{searchU}}
+
+### Search for message
+@searchM = kama
+GET http://localhost:8080/message/search/{{searchM}}
+
+### Update message
+@msgId2 = 1
+POST http://localhost:8080/message/{{msgId2}}/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "Content": "Sbohem kamarádi"
+}
+
+
+### Delete message
+@msgDID = 1
+DELETE http://localhost:8080/message/{{msgDID}}
+Authorization: Bearer {{token}}
