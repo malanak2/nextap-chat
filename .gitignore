@@ -1,0 +1,6 @@
+gen
+.idea
+docs
+build
+.gen
+*.exe
