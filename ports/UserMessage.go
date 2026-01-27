@@ -6,9 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-jet/jet/v2/postgres"
-	"github.com/malanak2/nextap-chat/domain"
 	"github.com/malanak2/nextap-chat/gen/chatdb/public/model"
-
 	. "github.com/malanak2/nextap-chat/gen/chatdb/public/table"
 )
 
@@ -18,7 +16,7 @@ func DeleteUserMessageById(id int32) error {
 	var destDUM []struct {
 		model.UserMessage
 	}
-	err := stmtDelUM.Query(domain.Db, &destDUM)
+	err := stmtDelUM.Query(Db, &destDUM)
 	if err != nil {
 		slog.Error("Database error deleting from usermessage table", "error", err.Error())
 		return err
@@ -32,7 +30,7 @@ func SelectUserMessagesByUserId(userID int32) ([]struct{ model.UserMessage }, er
 	var destUM []struct {
 		model.UserMessage
 	}
-	err := stmtUserMessage.Query(domain.Db, &destUM)
+	err := stmtUserMessage.Query(Db, &destUM)
 	if err != nil {
 		// User has sent no messages
 		if !strings.Contains(err.Error(), "no rows in result set") {
@@ -51,7 +49,7 @@ func InsertUserMessage(msg model.Message, uid int) error {
 	var destUM struct {
 		model.UserMessage
 	}
-	err := stmt.Query(domain.Db, &destUM)
+	err := stmt.Query(Db, &destUM)
 	if err != nil {
 		slog.Error("Error inserting into the UserMessage table", "error", err, "msgId", msg.ID, "uid", uid)
 		return errors.New("error inserting into the UserMessage table. Please contact an administrator")
@@ -67,7 +65,7 @@ func SelectMessagesByUserId(uid int, limit, page int) ([]struct{ model.UserMessa
 		model.UserMessage
 	}
 
-	err := stmt.Query(domain.Db, &destM)
+	err := stmt.Query(Db, &destM)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result") {

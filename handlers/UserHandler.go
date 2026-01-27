@@ -29,7 +29,7 @@ func HandleGetAllUsers(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query()["limit"] != nil {
 		limit, err = strconv.Atoi(r.URL.Query()["limit"][0])
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "Invalid limit format", http.StatusBadRequest)
 			return
 		}
 	}
@@ -37,7 +37,7 @@ func HandleGetAllUsers(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query()["page"] != nil {
 		page, err = strconv.Atoi(r.URL.Query()["page"][0])
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "Invalid page format", http.StatusBadRequest)
 			return
 		}
 	}
@@ -79,7 +79,7 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := ports.CreateUser(body.Username, body.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Could not create a user with these parameters", http.StatusBadRequest)
 		return
 	}
 	marshal, err := json.Marshal(user)
@@ -105,16 +105,16 @@ func HandleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var body domain.UserLogin
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Failed to decode body", http.StatusBadRequest)
 	}
 
 	s, err := ports.UserLogin(body.Username, body.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Invalid credentials", http.StatusBadRequest)
 	}
 	marshal, err := json.Marshal(s)
 	if err != nil {
-		http.Error(w, `Database marshal error `+err.Error(), http.StatusInternalServerError)
+		http.Error(w, `Failed to marshal login`, http.StatusInternalServerError)
 	}
 	fmt.Fprintf(w, "%s", string(marshal))
 }
@@ -139,7 +139,7 @@ func HandleGetUserById(w http.ResponseWriter, r *http.Request) {
 
 	dest, err := ports.GetUserById(int32(id))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "No user with this id", http.StatusBadRequest)
 		return
 	}
 
@@ -167,7 +167,7 @@ func HandleUserChangeName(w http.ResponseWriter, r *http.Request) {
 	var body domain.ChangeUsername
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Failed to decode body", http.StatusBadRequest)
 	}
 
 	uid, ok := r.Context().Value("userId").(int)
@@ -222,7 +222,7 @@ func HandleSearchUsers(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query()["limit"] != nil {
 		limit, err = strconv.Atoi(r.URL.Query()["limit"][0])
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "Invalid limit format", http.StatusBadRequest)
 			return
 		}
 	}
@@ -230,7 +230,7 @@ func HandleSearchUsers(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query()["page"] != nil {
 		page, err = strconv.Atoi(r.URL.Query()["page"][0])
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "Invalid page format", http.StatusBadRequest)
 			return
 		}
 	}

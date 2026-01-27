@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/go-jet/jet/v2/postgres"
-	"github.com/malanak2/nextap-chat/domain"
 	"github.com/malanak2/nextap-chat/gen/chatdb/public/model"
 	. "github.com/malanak2/nextap-chat/gen/chatdb/public/table"
 )
@@ -18,7 +17,7 @@ func DeleteMessageById(id int32) error {
 	var destDMSG []struct {
 		model.Message
 	}
-	err := stmtDelMsg.Query(domain.Db, &destDMSG)
+	err := stmtDelMsg.Query(Db, &destDMSG)
 	if err != nil {
 		slog.Error("Database error deleting from Message table", "error", err.Error())
 		return err
@@ -33,7 +32,7 @@ func SendMessage(content string, user int) (struct{ model.Message }, error) {
 	var destM struct {
 		model.Message
 	}
-	err := stmt.Query(domain.Db, &destM)
+	err := stmt.Query(Db, &destM)
 	if err != nil {
 		return struct{ model.Message }{}, errors.New("Error inserting into the message table. Message too long?")
 	}
@@ -58,7 +57,7 @@ func SelectMessageById(id int) (struct {
 		}
 	}
 
-	err := stmt.Query(domain.Db, &destM)
+	err := stmt.Query(Db, &destM)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result") {
@@ -76,7 +75,7 @@ func SelectMessagesByContent(content string, limit, page int) ([]struct{ model.M
 	var dest []struct {
 		model.Message
 	}
-	err := stmtSearch.Query(domain.Db, &dest)
+	err := stmtSearch.Query(Db, &dest)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return dest, nil
@@ -93,7 +92,7 @@ func UpdateMessageById(id int, content string) (struct{ model.Message }, error) 
 	var destM struct {
 		model.Message
 	}
-	err := stmt.Query(domain.Db, &destM)
+	err := stmt.Query(Db, &destM)
 	if err != nil {
 		slog.Error("Error updating Message table", "error", err.Error(), "msgId", id, "txt", content)
 		return destM, errors.New("Error updating Message table. Please contact an administrator. " + err.Error())
@@ -106,7 +105,7 @@ func MessageExists(id int) (bool, error) {
 	var destM struct {
 		model.Message
 	}
-	err := stmt.Query(domain.Db, &destM)
+	err := stmt.Query(Db, &destM)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return false, nil
@@ -123,7 +122,7 @@ func DeleteMessage(id int) error {
 	var destDUM struct {
 		model.UserMessage
 	}
-	err := stmtDUM.Query(domain.Db, &destDUM)
+	err := stmtDUM.Query(Db, &destDUM)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return errors.New("no message with this id")
@@ -135,7 +134,7 @@ func DeleteMessage(id int) error {
 	var destM struct {
 		model.Message
 	}
-	err = stmt.Query(domain.Db, &destM)
+	err = stmt.Query(Db, &destM)
 	if err != nil {
 		// This REALLY shouldn`t happen since we essentially verified the message exists since it was in usermessage table and the db constraints SHOULD make sure we are fine
 		slog.Error("Error deleting from Message table", "error", err.Error(), "msgId", id)
@@ -145,4 +144,17 @@ func DeleteMessage(id int) error {
 		return err
 	}
 	return nil
+}
+
+func GetAllMessages(limit, page int) ([]struct{ model.Message }, error) {
+	stmt := Message.SELECT(Message.AllColumns).LIMIT(int64(limit)).OFFSET(int64((page - 1) * limit))
+	var destM []struct {
+		model.Message
+	}
+	err := stmt.Query(Db, &destM)
+	if err != nil {
+		slog.Error("Failed to get all messages", "error", err.Error())
+		return nil, err
+	}
+	return destM, nil
 }

@@ -9,7 +9,6 @@ import (
 
 	"github.com/go-jet/jet/v2/postgres"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/malanak2/nextap-chat/domain"
 	"github.com/malanak2/nextap-chat/gen/chatdb/public/model"
 	. "github.com/malanak2/nextap-chat/gen/chatdb/public/table"
 )
@@ -23,7 +22,7 @@ func CreateUser(name string, password string) (model.User, error) {
 	var dest struct {
 		model.User
 	}
-	err := stmt.Query(domain.Db, &dest)
+	err := stmt.Query(Db, &dest)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint \"User_username_key\"") {
 			return model.User{}, errors.New("A user with this username already exists.")
@@ -40,7 +39,7 @@ func SearchUsers(text string, limit int, pageNo int) ([]struct{ model.User }, er
 	var dest []struct {
 		model.User
 	}
-	err := stmtSearch.Query(domain.Db, &dest)
+	err := stmtSearch.Query(Db, &dest)
 	return dest, err
 }
 
@@ -67,7 +66,7 @@ func DeleteUser(id int32) error {
 	var destDMSG []struct {
 		model.User
 	}
-	err = stmtDelUser.Query(domain.Db, &destDMSG)
+	err = stmtDelUser.Query(Db, &destDMSG)
 	if err != nil {
 		slog.Error("Database error deleting from User table", "error", err.Error())
 		return err
@@ -81,7 +80,7 @@ func ChangeUsername(id int32, username string) error {
 	var dest struct {
 		model.User
 	}
-	err := stmtCU.Query(domain.Db, &dest)
+	err := stmtCU.Query(Db, &dest)
 	if err != nil {
 		slog.Error("Database error editing username", "error", err.Error())
 		return err
@@ -95,7 +94,7 @@ func GetUserById(id int32) (struct{ model.User }, error) {
 	var dest struct {
 		model.User
 	}
-	err := stmtAuthor.Query(domain.Db, &dest)
+	err := stmtAuthor.Query(Db, &dest)
 	if err != nil {
 		slog.Error("Database error getting user", "error", err.Error())
 		return struct{ model.User }{}, err
@@ -110,7 +109,7 @@ func UserLogin(username, password string) (string, error) {
 	var dest struct {
 		model.User
 	}
-	err := stmt.Query(domain.Db, &dest)
+	err := stmt.Query(Db, &dest)
 	if err != nil {
 		return "", errors.New("Invalid username or password")
 	}
@@ -129,7 +128,7 @@ func GetAllUsers(limit int, pageNo int) ([]struct{ model.User }, error) {
 	var dest []struct {
 		model.User
 	}
-	err := stmt.Query(domain.Db, &dest)
+	err := stmt.Query(Db, &dest)
 	return dest, err
 }
 
@@ -138,7 +137,7 @@ func UserExists(uid int) (bool, error) {
 	var destU struct {
 		model.Channel
 	}
-	err := stmtS.Query(domain.Db, &destU)
+	err := stmtS.Query(Db, &destU)
 	if err != nil {
 		slog.Warn("User with invalid ID found - probably fine though", "error", err.Error(), "uid", uid)
 		return false, errors.New("no user with that id")

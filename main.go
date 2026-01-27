@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"github.com/gorilla/mux"
-	"github.com/malanak2/nextap-chat/domain"
 	"github.com/malanak2/nextap-chat/handlers"
+	"github.com/malanak2/nextap-chat/ports"
 	"github.com/swaggo/http-swagger/v2"
 )
 
@@ -23,7 +23,7 @@ import (
 
 func main() {
 	// Init db
-	err := domain.InitDb()
+	err := ports.InitDb()
 	if err != nil {
 		panic(err)
 	}
