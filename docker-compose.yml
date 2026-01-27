@@ -1,0 +1,27 @@
+services:
+  db:
+    image: postgres:18.1
+    environment:
+      POSTGRES_USER: program
+      POSTGRES_PASSWORD: Password123
+      POSTGRES_DB: chatdb
+    ports:
+      - "127.0.0.1:5432:5432"
+  adminer:
+    image: adminer
+    ports:
+      - "127.0.0.1:8081:8080"
+  service:
+   image: nextap-chat:latest
+   ports:
+     - "8080:8080"
+   environment:
+     DB_host: db
+     DB_name: chatdb
+     DB_pass: Password123
+     DB_port: 5432
+     DB_user: program
+     JWT_SECRET: secret
+     port: 8080
+   depends_on:
+     - db
