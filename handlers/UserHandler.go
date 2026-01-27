@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/malanak2/nextap-chat/domain"
 	"github.com/malanak2/nextap-chat/ports"
+	"github.com/malanak2/nextap-chat/usecases"
 )
 
 // HandleGetAllUsers godoc
@@ -23,33 +24,19 @@ import (
 // @Failure				500 {object}	string
 // @Router				/users [get]
 func HandleGetAllUsers(w http.ResponseWriter, r *http.Request) {
-	page := 1
-	limit := 50
-	var err error
-	if r.URL.Query()["limit"] != nil {
-		limit, err = strconv.Atoi(r.URL.Query()["limit"][0])
-		if err != nil {
-			http.Error(w, "Invalid limit format", http.StatusBadRequest)
-			return
-		}
+	limit, page, err := GetVars(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
-
-	if r.URL.Query()["page"] != nil {
-		page, err = strconv.Atoi(r.URL.Query()["page"][0])
-		if err != nil {
-			http.Error(w, "Invalid page format", http.StatusBadRequest)
-			return
-		}
-	}
-
 	dest, err := ports.GetAllUsers(limit, page)
 	if err != nil {
-		http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
+		http.Error(w, ErrorDatabase.Error(), http.StatusInternalServerError)
 		return
 	}
 	marshal, err := json.Marshal(dest)
 	if err != nil {
-		http.Error(w, `Database marshal error `+err.Error(), http.StatusInternalServerError)
+		http.Error(w, ErrorMarshal.Error(), http.StatusInternalServerError)
 		return
 	}
 	fmt.Fprintf(w, "%s", marshal)
@@ -71,20 +58,27 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&body)
 
 	if err != nil || body.Username == "" || body.Password == "" {
-		http.Error(w, "Could not create user with these parameters", http.StatusBadRequest)
+		http.Error(w, ErrorInvalidParameters.Error(), http.StatusBadRequest)
 		return
 	}
 	if len(body.Username) < 3 {
-		http.Error(w, "Username needs to have at least 3 characters.", http.StatusBadRequest)
-	}
-	user, err := ports.CreateUser(body.Username, body.Password)
-	if err != nil {
-		http.Error(w, "Could not create a user with these parameters", http.StatusBadRequest)
+		http.Error(w, ErrorTooShort.Error(), http.StatusBadRequest)
 		return
 	}
-	marshal, err := json.Marshal(user)
+
+	if len(body.Username) > 50 {
+		http.Error(w, ErrorTooLong.Error(), http.StatusBadRequest)
+		return
+	}
+
+	user, err := usecases.CreateUser(body.Username, body.Password)
 	if err != nil {
-		http.Error(w, `Database marshal error `+err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	marshal, err := json.Marshal(user.ID)
+	if err != nil {
+		http.Error(w, ErrorMarshal.Error(), http.StatusInternalServerError)
 		return
 	}
 	fmt.Fprintf(w, "%s", marshal)
@@ -105,16 +99,19 @@ func HandleUserLogin(w http.ResponseWriter, r *http.Request) {
 	var body domain.UserLogin
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		http.Error(w, "Failed to decode body", http.StatusBadRequest)
+		http.Error(w, ErrorInvalidBody.Error(), http.StatusBadRequest)
+		return
 	}
 
-	s, err := ports.UserLogin(body.Username, body.Password)
+	s, err := usecases.LoginUser(body.Username, body.Password)
 	if err != nil {
-		http.Error(w, "Invalid credentials", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 	marshal, err := json.Marshal(s)
 	if err != nil {
-		http.Error(w, `Failed to marshal login`, http.StatusInternalServerError)
+		http.Error(w, ErrorMarshal.Error(), http.StatusInternalServerError)
+		return
 	}
 	fmt.Fprintf(w, "%s", string(marshal))
 }
@@ -133,7 +130,7 @@ func HandleGetUserById(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "User id not an integer", http.StatusBadRequest)
+		http.Error(w, ErrorInvalidId.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -145,7 +142,7 @@ func HandleGetUserById(w http.ResponseWriter, r *http.Request) {
 
 	marshal, err := json.Marshal(dest.User)
 	if err != nil {
-		http.Error(w, `Database marshal error `+err.Error(), http.StatusInternalServerError)
+		http.Error(w, ErrorMarshal.Error(), http.StatusInternalServerError)
 		return
 	}
 	fmt.Fprintf(w, "%s", marshal)
@@ -167,25 +164,30 @@ func HandleUserChangeName(w http.ResponseWriter, r *http.Request) {
 	var body domain.ChangeUsername
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		http.Error(w, "Failed to decode body", http.StatusBadRequest)
+		http.Error(w, ErrorInvalidBody.Error(), http.StatusBadRequest)
+		return
 	}
 
 	uid, ok := r.Context().Value("userId").(int)
 	if !ok {
 		// If this happens either the login function gives out a malformed but valid jwt, or somebody has our signing key - not good either way
-		http.Error(w, "Invalid jwt. Please contact a site administrator", http.StatusInternalServerError)
+		http.Error(w, ErrorBadJwt.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if len(body.Username) > 50 || len(body.Username) < 3 {
-		http.Error(w, "Invalid username", http.StatusBadRequest)
+	if len(body.Username) < 3 {
+		http.Error(w, ErrorTooShort.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(body.Username) > 50 {
+		http.Error(w, ErrorTooLong.Error(), http.StatusBadRequest)
 		return
 	}
 
 	err = ports.ChangeUsername(int32(uid), body.Username)
 
 	if err != nil {
-		http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
+		http.Error(w, ErrorDatabase.Error(), http.StatusInternalServerError)
 		return
 	}
 	fmt.Fprintf(w, "OK")
@@ -195,11 +197,12 @@ func HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "User id not an integer", http.StatusBadRequest)
+		http.Error(w, ErrorInvalidId.Error(), http.StatusBadRequest)
+		return
 	}
 	err = ports.DeleteUser(int32(id))
 	if err != nil {
-		http.Error(w, `Database delete error `+err.Error(), http.StatusInternalServerError)
+		http.Error(w, ErrorMarshal.Error(), http.StatusInternalServerError)
 		return
 	}
 	fmt.Fprintf(w, "User with the id %d was deleted", id)
@@ -216,23 +219,10 @@ func HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
 // @Router				/users/search/{txt} [get]
 
 func HandleSearchUsers(w http.ResponseWriter, r *http.Request) {
-	page := 1
-	limit := 50
-	var err error
-	if r.URL.Query()["limit"] != nil {
-		limit, err = strconv.Atoi(r.URL.Query()["limit"][0])
-		if err != nil {
-			http.Error(w, "Invalid limit format", http.StatusBadRequest)
-			return
-		}
-	}
-
-	if r.URL.Query()["page"] != nil {
-		page, err = strconv.Atoi(r.URL.Query()["page"][0])
-		if err != nil {
-			http.Error(w, "Invalid page format", http.StatusBadRequest)
-			return
-		}
+	limit, page, err := GetVars(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 	vars := mux.Vars(r)
 	text, err := url.QueryUnescape(vars["txt"])
@@ -247,12 +237,14 @@ func HandleSearchUsers(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, `[]`)
 			return
 		}
-		http.Error(w, `Database query error `+err.Error(), http.StatusInternalServerError)
+		http.Error(w, ErrorDatabase.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	marshal, err := json.Marshal(dest)
 	if err != nil {
-		http.Error(w, `Database marshal error `+err.Error(), http.StatusInternalServerError)
+		http.Error(w, ErrorMarshal.Error(), http.StatusInternalServerError)
+		return
 	}
 	fmt.Fprintf(w, "%s", marshal)
 }

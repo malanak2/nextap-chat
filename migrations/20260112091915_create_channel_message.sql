@@ -8,9 +8,9 @@ CREATE TABLE "MessageChannel" (
 );
 
 
-ALTER TABLE "MessageChannel" ADD FOREIGN KEY ("channel") REFERENCES "Channel" ("ID");
+ALTER TABLE "MessageChannel" ADD FOREIGN KEY ("channel_id") REFERENCES "Channel" ("id");
 
-ALTER TABLE "MessageChannel" ADD FOREIGN KEY ("message") REFERENCES "Message" ("ID");
+ALTER TABLE "MessageChannel" ADD FOREIGN KEY ("message_id") REFERENCES "Message" ("id");
 
 -- +goose StatementEnd
 
@@ -18,5 +18,5 @@ ALTER TABLE "MessageChannel" ADD FOREIGN KEY ("message") REFERENCES "Message" ("
 -- +goose StatementBegin
 SELECT 'down SQL query';
 
-DROP TABLE "MessageChannel";
+DROP TABLE IF EXISTS "MessageChannel";
 -- +goose StatementEnd

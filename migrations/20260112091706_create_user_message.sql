@@ -7,9 +7,9 @@ CREATE TABLE "UserMessage" (
   "message" INTEGER UNIQUE NOT NULL
 );
 
-ALTER TABLE "UserMessage" ADD FOREIGN KEY ("user") REFERENCES "User" ("ID");
+ALTER TABLE "UserMessage" ADD FOREIGN KEY ("user") REFERENCES "User" ("id");
 
-ALTER TABLE "UserMessage" ADD FOREIGN KEY ("message") REFERENCES "Message" ("ID");
+ALTER TABLE "UserMessage" ADD FOREIGN KEY ("message") REFERENCES "Message" ("id");
 
 -- +goose StatementEnd
 

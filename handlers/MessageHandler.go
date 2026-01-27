@@ -31,29 +31,30 @@ func HandleSendMessage(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		// If this happens either the login function gives out a malformed but valid jwt, or somebody has our signing key - not good either way
 		slog.Error("Invalid jwt detected")
-		http.Error(w, "Invalid jwt.", http.StatusInternalServerError)
+		http.Error(w, ErrorBadJwt.Error(), http.StatusInternalServerError)
 		return
 	}
 	var body domain.SendMessage
 	err := json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		http.Error(w, "Failed to decode body", http.StatusBadRequest)
+		http.Error(w, ErrorInvalidBody.Error(), http.StatusBadRequest)
+		return
 	}
 
 	uExists, err := ports.UserExists(uid)
 
 	if !uExists {
-		http.Error(w, "User does not exist", http.StatusBadRequest)
+		http.Error(w, ErrorNoExist.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Verify channel message
 	if len(body.Content) == 0 {
-		http.Error(w, "Content required", http.StatusBadRequest)
+		http.Error(w, ErrorTooShort.Error(), http.StatusBadRequest)
 		return
 	}
 	if len(body.Content) > 1000 {
-		http.Error(w, "Content too long", http.StatusBadRequest)
+		http.Error(w, ErrorTooLong.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -79,7 +80,8 @@ func HandleSendMessage(w http.ResponseWriter, r *http.Request) {
 	marshal, err := json.Marshal(msg)
 	if err != nil {
 		slog.Error("Failed to marshal message")
-		http.Error(w, "Failed to marshal message", http.StatusInternalServerError)
+		http.Error(w, ErrorMarshal.Error(), http.StatusInternalServerError)
+		return
 	}
 	fmt.Fprintf(w, "%s", marshal)
 }
@@ -99,24 +101,13 @@ func HandleGetMessagesByUserId(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	uid, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid id format", http.StatusBadRequest)
+		http.Error(w, ErrorInvalidId.Error(), http.StatusBadRequest)
+		return
 	}
-	page := 1
-	limit := 50
-	if r.URL.Query()["limit"] != nil {
-		limit, err = strconv.Atoi(r.URL.Query()["limit"][0])
-		if err != nil {
-			http.Error(w, "Invalid limit format", http.StatusBadRequest)
-			return
-		}
-	}
-
-	if r.URL.Query()["page"] != nil {
-		page, err = strconv.Atoi(r.URL.Query()["page"][0])
-		if err != nil {
-			http.Error(w, "Invalid page format", http.StatusBadRequest)
-			return
-		}
+	limit, page, err := GetVars(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	destM, err := ports.SelectMessagesByUserId(uid, limit, page)
@@ -145,7 +136,8 @@ func HandleGetMessageById(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid id format", http.StatusBadRequest)
+		http.Error(w, ErrorInvalidId.Error(), http.StatusBadRequest)
+		return
 	}
 
 	destM, err := ports.SelectMessageById(id)
@@ -156,7 +148,7 @@ func HandleGetMessageById(w http.ResponseWriter, r *http.Request) {
 	marshal, err := json.Marshal(destM)
 	if err != nil {
 		slog.Error("Failed to marshal message", "error", err)
-		http.Error(w, "Failed to marshal message.", http.StatusInternalServerError)
+		http.Error(w, ErrorMarshal.Error(), http.StatusInternalServerError)
 		return
 	}
 	fmt.Fprintf(w, "%s", marshal)
@@ -175,32 +167,21 @@ func HandleGetMessageById(w http.ResponseWriter, r *http.Request) {
 // @Security			JWTTokenBasic
 // @Router				/messages [get]
 func HandleGetAllMessages(w http.ResponseWriter, r *http.Request) {
-	page := 1
-	limit := 50
-	var err error
-	if r.URL.Query()["limit"] != nil {
-		limit, err = strconv.Atoi(r.URL.Query()["limit"][0])
-		if err != nil {
-			http.Error(w, "Invalid limit format", http.StatusBadRequest)
-			return
-		}
-	}
-
-	if r.URL.Query()["page"] != nil {
-		page, err = strconv.Atoi(r.URL.Query()["page"][0])
-		if err != nil {
-			http.Error(w, "Invalid page format", http.StatusBadRequest)
-			return
-		}
+	limit, page, err := GetVars(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	destM, err := ports.GetAllMessages(limit, page)
 	if err != nil {
 		http.Error(w, "Failed to get all messages", http.StatusInternalServerError)
+		return
 	}
 	marshal, err := json.Marshal(destM)
 	if err != nil {
 		http.Error(w, "Error converting  Message table. Please contact an administrator.", http.StatusInternalServerError)
+		return
 	}
 	fmt.Fprintf(w, "%s", marshal)
 }
@@ -218,23 +199,10 @@ func HandleGetAllMessages(w http.ResponseWriter, r *http.Request) {
 // @Security			JWTTokenBasic
 // @Router				/message/search/{txt} [post]
 func HandleSearchMessages(w http.ResponseWriter, r *http.Request) {
-	page := 1
-	limit := 50
-	var err error
-	if r.URL.Query()["limit"] != nil {
-		limit, err = strconv.Atoi(r.URL.Query()["limit"][0])
-		if err != nil {
-			http.Error(w, "Invalid limit format", http.StatusBadRequest)
-			return
-		}
-	}
-
-	if r.URL.Query()["page"] != nil {
-		page, err = strconv.Atoi(r.URL.Query()["page"][0])
-		if err != nil {
-			http.Error(w, "Invalid page format", http.StatusBadRequest)
-			return
-		}
+	limit, page, err := GetVars(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 	vars := mux.Vars(r)
 	text, err := url.QueryUnescape(vars["txt"])
@@ -247,6 +215,7 @@ func HandleSearchMessages(w http.ResponseWriter, r *http.Request) {
 	marshal, err := json.Marshal(msgs)
 	if err != nil {
 		http.Error(w, `Failed to marshal message[]`, http.StatusInternalServerError)
+		return
 	}
 	fmt.Fprintf(w, "%s", marshal)
 }
@@ -267,20 +236,22 @@ func HandleEditMessageById(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid id format", http.StatusBadRequest)
+		http.Error(w, ErrorInvalidId.Error(), http.StatusBadRequest)
+		return
 	}
 	var body domain.EditMessage
 	err = json.NewDecoder(r.Body).Decode(&body)
 	if err != nil {
-		http.Error(w, "Failed to decode body", http.StatusBadRequest)
+		http.Error(w, ErrorInvalidBody.Error(), http.StatusBadRequest)
+		return
 	}
 	// Verify channel message
 	if len(body.Content) == 0 {
-		http.Error(w, "Content required", http.StatusBadRequest)
+		http.Error(w, ErrorTooShort.Error(), http.StatusBadRequest)
 		return
 	}
 	if len(body.Content) > 1000 {
-		http.Error(w, "Content too long", http.StatusBadRequest)
+		http.Error(w, ErrorTooLong.Error(), http.StatusBadRequest)
 		return
 	}
 	msgExists, err := ports.MessageExists(id)
@@ -299,7 +270,8 @@ func HandleEditMessageById(w http.ResponseWriter, r *http.Request) {
 	}
 	marshal, err := json.Marshal(destM)
 	if err != nil {
-		http.Error(w, "Failed to marshal message.", http.StatusInternalServerError)
+		http.Error(w, ErrorMarshal.Error(), http.StatusInternalServerError)
+		return
 	}
 	fmt.Fprintf(w, "%s", marshal)
 }
@@ -320,11 +292,13 @@ func HandleDeleteMessageById(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid id format", http.StatusBadRequest)
+		http.Error(w, ErrorInvalidId.Error(), http.StatusBadRequest)
+		return
 	}
 	err = ports.DeleteMessage(id)
 	if err != nil {
 		http.Error(w, "Message not found.", http.StatusBadRequest)
+		return
 	}
 	fmt.Fprintf(w, "Message deleted")
 }

@@ -3,32 +3,35 @@ package ports
 import (
 	"errors"
 	"log/slog"
-	"os"
 	"strings"
-	"time"
 
 	"github.com/go-jet/jet/v2/postgres"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/malanak2/nextap-chat/gen/chatdb/public/model"
 	. "github.com/malanak2/nextap-chat/gen/chatdb/public/table"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func CreateUser(name string, password string) (model.User, error) {
-	// TODO: validate password to match expectation
 	slog.Info("Creating user", "Username", name)
-	stmt := User.INSERT(User.Username).VALUES(
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		slog.Error("Failed to hash password", "error", err.Error(), "password", password)
+		return model.User{}, ErrorHashing
+	}
+	stmt := User.INSERT(User.Username, User.Password).VALUES(
 		name,
+		hash,
 	).RETURNING(User.AllColumns)
 	var dest struct {
 		model.User
 	}
-	err := stmt.Query(Db, &dest)
+	err = stmt.Query(Db, &dest)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint \"User_username_key\"") {
-			return model.User{}, errors.New("A user with this username already exists.")
+			return model.User{}, ErrorDuplicateUsername
 		}
-		slog.Error("Error searching the database", "error", err.Error())
-		return model.User{}, errors.New(`Database query error ` + err.Error())
+		slog.Error("Error inserting into User", "error", err.Error())
+		return model.User{}, ErrorDatabase
 	}
 	return dest.User, nil
 }
@@ -40,7 +43,13 @@ func SearchUsers(text string, limit int, pageNo int) ([]struct{ model.User }, er
 		model.User
 	}
 	err := stmtSearch.Query(Db, &dest)
-	return dest, err
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return dest, ErrorNoResult
+		}
+		return dest, ErrorDatabase
+	}
+	return dest, nil
 }
 
 func DeleteUser(id int32) error {
@@ -48,17 +57,23 @@ func DeleteUser(id int32) error {
 	// Get all messages for user
 	destUM, err := SelectUserMessagesByUserId(id)
 	if err != nil {
-		return err
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return ErrorNoResult
+		}
+		slog.Error("Error selectiing from UserMessage table", "error", err.Error())
+		return ErrorDatabase
 	}
 	// For every message delete its entry in UserMessage and then delete the message
 	for i := 0; i < len(destUM); i++ {
 		err = DeleteUserMessageById(destUM[i].ID)
 		if err != nil {
-			return err
+			slog.Error("Database error deleting from UserMessage table", "error", err.Error())
+			return ErrorDatabase
 		}
 		err = DeleteMessageById(destUM[i].Message)
 		if err != nil {
-			return err
+			slog.Error("Database error deleting from Message table", "error", err.Error())
+			return ErrorDatabase
 		}
 	}
 	// Finally, delete user
@@ -69,7 +84,7 @@ func DeleteUser(id int32) error {
 	err = stmtDelUser.Query(Db, &destDMSG)
 	if err != nil {
 		slog.Error("Database error deleting from User table", "error", err.Error())
-		return err
+		return ErrorDatabase
 	}
 	return nil
 }
@@ -83,7 +98,7 @@ func ChangeUsername(id int32, username string) error {
 	err := stmtCU.Query(Db, &dest)
 	if err != nil {
 		slog.Error("Database error editing username", "error", err.Error())
-		return err
+		return ErrorDatabase
 	}
 	return nil
 }
@@ -97,30 +112,26 @@ func GetUserById(id int32) (struct{ model.User }, error) {
 	err := stmtAuthor.Query(Db, &dest)
 	if err != nil {
 		slog.Error("Database error getting user", "error", err.Error())
-		return struct{ model.User }{}, err
+		return struct{ model.User }{}, ErrorDatabase
 	}
 	return dest, nil
 }
 
-func UserLogin(username, password string) (string, error) {
+func UserLogin(username, password string) (model.User, error) {
 	slog.Info("User login", "username", username)
-	// TODO: verify password
 	stmt := User.SELECT(User.AllColumns).FROM(User).WHERE(postgres.AND(User.Username.EQ(postgres.Text(username))))
 	var dest struct {
 		model.User
 	}
 	err := stmt.Query(Db, &dest)
 	if err != nil {
-		return "", errors.New("Invalid username or password")
+		return model.User{}, ErrorBadCredentials
 	}
-	t := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		// Expires in about a month
-		"exp":      jwt.NewNumericDate(time.Now().Add(time.Hour * 24 * 30)),
-		"username": username,
-		"userId":   dest.ID,
-	})
-	s, _ := t.SignedString([]byte(os.Getenv("JWT_SECRET")))
-	return s, nil
+	err = bcrypt.CompareHashAndPassword([]byte(dest.Password), []byte(password))
+	if err != nil {
+		return model.User{}, ErrorBadCredentials
+	}
+	return dest.User, nil
 }
 
 func GetAllUsers(limit int, pageNo int) ([]struct{ model.User }, error) {

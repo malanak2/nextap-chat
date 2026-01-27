@@ -28,7 +28,7 @@ func JwtMiddleware(next http.Handler) http.Handler {
 			return []byte(os.Getenv("JWT_SECRET")), nil
 		})
 		if err != nil || !token.Valid {
-			http.Error(w, "Invalid or expired token ("+err.Error()+")", http.StatusUnauthorized)
+			http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
 			return
 		}
 		// Sends UserId to the handler func

@@ -11,5 +11,5 @@ CREATE TABLE "Message" (
 -- +goose StatementBegin
 SELECT 'down SQL query';
 
-DROP TABLE "Message";
+DROP TABLE IF EXISTS "Message";
 -- +goose StatementEnd
