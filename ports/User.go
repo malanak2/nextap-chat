@@ -55,23 +55,26 @@ func SearchUsers(text string, limit int, pageNo int) ([]struct{ model.User }, er
 func DeleteUser(id int32) error {
 	slog.Info("Deleting user", "id", id)
 	// Get all messages for user
-	destUM, err := SelectUserMessagesByUserId(id)
+	transaction, err := Db.Begin()
 	if err != nil {
+		return ErrorDatabase
+	}
+	stmt := Message.SELECT(Message.ID).WHERE(Message.UserID.EQ(postgres.Int(int64(id))))
+	var dest []struct {
+		id int
+	}
+	err = stmt.Query(transaction, &dest)
+	if err != nil {
+		transaction.Rollback()
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return ErrorNoResult
 		}
-		slog.Error("Error selectiing from UserMessage table", "error", err.Error())
 		return ErrorDatabase
 	}
-	// For every message delete its entry in UserMessage and then delete the message
-	for i := 0; i < len(destUM); i++ {
-		err = DeleteUserMessageById(destUM[i].ID)
+	for i := 0; i < len(dest); i++ {
+		err = DeleteMessageById(int32(dest[i].id), transaction)
 		if err != nil {
-			slog.Error("Database error deleting from UserMessage table", "error", err.Error())
-			return ErrorDatabase
-		}
-		err = DeleteMessageById(destUM[i].Message)
-		if err != nil {
+			transaction.Rollback()
 			slog.Error("Database error deleting from Message table", "error", err.Error())
 			return ErrorDatabase
 		}
@@ -81,11 +84,13 @@ func DeleteUser(id int32) error {
 	var destDMSG []struct {
 		model.User
 	}
-	err = stmtDelUser.Query(Db, &destDMSG)
+	err = stmtDelUser.Query(transaction, &destDMSG)
 	if err != nil {
+		transaction.Rollback()
 		slog.Error("Database error deleting from User table", "error", err.Error())
 		return ErrorDatabase
 	}
+	transaction.Commit()
 	return nil
 }
 
@@ -146,7 +151,7 @@ func GetAllUsers(limit int, pageNo int) ([]struct{ model.User }, error) {
 func UserExists(uid int) (bool, error) {
 	stmtS := User.SELECT(User.AllColumns).WHERE(User.ID.EQ(postgres.Int(int64(uid))))
 	var destU struct {
-		model.Channel
+		model.User
 	}
 	err := stmtS.Query(Db, &destU)
 	if err != nil {

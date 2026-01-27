@@ -1,6 +1,7 @@
 package ports
 
 import (
+	"database/sql"
 	"errors"
 	"log/slog"
 	"strconv"
@@ -11,10 +12,10 @@ import (
 	. "github.com/malanak2/nextap-chat/gen/chatdb/public/table"
 )
 
-func DeleteMessageById(id int32) error {
+func DeleteMessageById(id int32, tx *sql.Tx) error {
 	stmtDelMsg := Message.DELETE().WHERE(Message.ID.EQ(postgres.Int(int64(id))))
 	slog.Info("Deleting message", "id", id)
-	err := stmtDelMsg.Query(Db, nil)
+	err := stmtDelMsg.Query(tx, nil)
 	if err != nil {
 		slog.Error("Database error deleting from Message table", "error", err.Error())
 		return err
@@ -29,7 +30,7 @@ func SendMessage(content string, user int) (struct{ model.Message }, error) {
 		slog.Error("Failed to open transaction", "error", err.Error())
 		return struct{ model.Message }{}, ErrorDatabase
 	}
-	stmt := Message.INSERT(Message.Content).VALUES(postgres.String(content)).RETURNING(Message.ID)
+	stmt := Message.INSERT(Message.Content, Message.UserID).VALUES(postgres.String(content), postgres.Int(int64(user))).RETURNING(Message.ID)
 
 	var destM struct {
 		model.Message
@@ -39,12 +40,11 @@ func SendMessage(content string, user int) (struct{ model.Message }, error) {
 		transaction.Rollback()
 		return struct{ model.Message }{}, errors.New("Error inserting into the message table. Message too long?")
 	}
-	err = InsertUserMessage(destM.Message, user, transaction)
+	err = transaction.Commit()
 	if err != nil {
-		transaction.Rollback()
+		slog.Error("Failed to commit", "error", err)
 		return struct{ model.Message }{}, err
 	}
-	transaction.Commit()
 	return destM, nil
 }
 
@@ -164,4 +164,18 @@ func GetAllMessages(limit, page int) ([]struct{ model.Message }, error) {
 		return nil, err
 	}
 	return destM, nil
+}
+
+func SelectMessagesByUserId(id, limit, page int) ([]struct{ model.Message }, error) {
+	stmt := Message.SELECT(Message.ID).WHERE(Message.UserID.EQ(postgres.Int(int64(id)))).LIMIT(int64(limit)).OFFSET(int64((page - 1) * limit))
+	var dest []struct {
+		model.Message
+	}
+	err := stmt.Query(Db, &dest)
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return []struct{ model.Message }{}, ErrorNoResult
+		}
+	}
+	return dest, nil
 }

@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 SELECT 'up SQL query';
-ALTER TABLE "Message" ADD COLUMN "user_id" INTEGER;
+ALTER TABLE "Message" ADD COLUMN "user_id" INTEGER NOT NULL;
 UPDATE "Message"
 SET
     "user_id" = "UserMessage"."user"

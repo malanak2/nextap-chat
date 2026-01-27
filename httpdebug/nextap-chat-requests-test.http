@@ -21,13 +21,12 @@ Content-Type: application/json
 }
 
 ### Send message
-@content = "Ahoj kamarádi"
+@content = "Ahoj kamarádia"
 POST http://localhost:8080/sendMessage
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "Channel": {{channel}},
   "Content": {{content}}
 }
 
@@ -59,7 +58,7 @@ GET http://localhost:8080/user/{{id}}/messages?page=1&limit=1
 GET http://localhost:8080/message/{{msgId}}
 
 ### Get all messages
-GET http://localhost:8080/messages?page=1&limit=1
+GET http://localhost:8080/messages?page=1&limit=10
 
 
 ### Delete user
