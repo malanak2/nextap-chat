@@ -2,9 +2,9 @@
 -- +goose StatementBegin
 SELECT 'up SQL query';
 CREATE TABLE "MessageChannel" (
-  "ID" SERIAL PRIMARY KEY,
-  "channel" INTEGER NOT NULL,
-  "message" INTEGER UNIQUE NOT NULL
+  "id" SERIAL PRIMARY KEY,
+  "channel_id" INTEGER NOT NULL,
+  "message_id" INTEGER UNIQUE NOT NULL
 );
 
 

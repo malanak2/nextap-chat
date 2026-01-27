@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 SELECT 'up SQL query';
 CREATE TABLE "Message" (
-  "ID" SERIAL PRIMARY KEY,
+  "id" SERIAL PRIMARY KEY,
   "content" VARCHAR(1000) NOT NULL
 );
 -- +goose StatementEnd
