@@ -12,12 +12,9 @@ import (
 )
 
 func DeleteMessageById(id int32) error {
-	stmtDelMsg := Message.DELETE().WHERE(Message.ID.EQ(postgres.Int(int64(id)))).RETURNING(Message.AllColumns)
+	stmtDelMsg := Message.DELETE().WHERE(Message.ID.EQ(postgres.Int(int64(id))))
 	slog.Info("Deleting message", "id", id)
-	var destDMSG []struct {
-		model.Message
-	}
-	err := stmtDelMsg.Query(Db, &destDMSG)
+	err := stmtDelMsg.Query(Db, nil)
 	if err != nil {
 		slog.Error("Database error deleting from Message table", "error", err.Error())
 		return err
@@ -27,19 +24,27 @@ func DeleteMessageById(id int32) error {
 
 func SendMessage(content string, user int) (struct{ model.Message }, error) {
 	slog.Info("Sending message", "content", content, "user", user)
+	transaction, err := Db.Begin()
+	if err != nil {
+		slog.Error("Failed to open transaction", "error", err.Error())
+		return struct{ model.Message }{}, ErrorDatabase
+	}
 	stmt := Message.INSERT(Message.Content).VALUES(postgres.String(content)).RETURNING(Message.ID)
 
 	var destM struct {
 		model.Message
 	}
-	err := stmt.Query(Db, &destM)
+	err = stmt.Query(transaction, &destM)
 	if err != nil {
+		transaction.Rollback()
 		return struct{ model.Message }{}, errors.New("Error inserting into the message table. Message too long?")
 	}
-	err = InsertUserMessage(destM.Message, user)
+	err = InsertUserMessage(destM.Message, user, transaction)
 	if err != nil {
+		transaction.Rollback()
 		return struct{ model.Message }{}, err
 	}
+	transaction.Commit()
 	return destM, nil
 }
 
@@ -118,31 +123,33 @@ func MessageExists(id int) (bool, error) {
 
 func DeleteMessage(id int) error {
 	slog.Info("Deleting message", "id", id)
-	stmtDUM := UserMessage.DELETE().WHERE(UserMessage.Message.EQ(postgres.Int(int64(id)))).RETURNING(UserMessage.AllColumns)
-	var destDUM struct {
-		model.UserMessage
+	tx, err := Db.Begin()
+	if err != nil {
+		slog.Error("Failed to open transaction", "error", err.Error())
+		return ErrorDatabase
 	}
-	err := stmtDUM.Query(Db, &destDUM)
+	stmtDUM := UserMessage.DELETE().WHERE(UserMessage.Message.EQ(postgres.Int(int64(id))))
+	err = stmtDUM.Query(tx, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return errors.New("no message with this id")
 		}
 		slog.Error("Error deleting from UserMessage table", "error", err.Error(), "msgId", id)
+		tx.Rollback()
 		return err
 	}
-	stmt := Message.DELETE().WHERE(Message.ID.EQ(postgres.Int(int64(id)))).RETURNING(Message.AllColumns)
-	var destM struct {
-		model.Message
-	}
-	err = stmt.Query(Db, &destM)
+	stmt := Message.DELETE().WHERE(Message.ID.EQ(postgres.Int(int64(id))))
+	err = stmt.Query(tx, nil)
 	if err != nil {
 		// This REALLY shouldn`t happen since we essentially verified the message exists since it was in usermessage table and the db constraints SHOULD make sure we are fine
 		slog.Error("Error deleting from Message table", "error", err.Error(), "msgId", id)
+		tx.Rollback()
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return errors.New("no message with this id")
 		}
 		return err
 	}
+	tx.Commit()
 	return nil
 }
 

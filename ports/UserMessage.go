@@ -1,6 +1,7 @@
 package ports
 
 import (
+	"database/sql"
 	"errors"
 	"log/slog"
 	"strings"
@@ -42,14 +43,14 @@ func SelectUserMessagesByUserId(userID int32) ([]struct{ model.UserMessage }, er
 	return destUM, nil
 }
 
-func InsertUserMessage(msg model.Message, uid int) error {
+func InsertUserMessage(msg model.Message, uid int, tx *sql.Tx) error {
 	slog.Info("Inserting UserMessage", "msgId", msg.ID, "uid", uid)
 	// Insert into user message table
 	stmt := UserMessage.INSERT(UserMessage.User, UserMessage.Message).VALUES(uid, msg.ID).RETURNING(UserMessage.AllColumns)
 	var destUM struct {
 		model.UserMessage
 	}
-	err := stmt.Query(Db, &destUM)
+	err := stmt.Query(tx, &destUM)
 	if err != nil {
 		slog.Error("Error inserting into the UserMessage table", "error", err, "msgId", msg.ID, "uid", uid)
 		return errors.New("error inserting into the UserMessage table. Please contact an administrator")
