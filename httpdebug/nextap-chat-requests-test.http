@@ -1,6 +1,6 @@
 @username = Kriket
 @password = pass
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzEyMzQ3MjQsInVzZXJJZCI6MSwidXNlcm5hbWUiOiJLcmlrZXQifQ.45n-Mo0Hz56J0JR5iT3nxmhEXoYLtpqAb6YIGdvi3MQ
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzIxMDEwOTUsInVzZXJJZCI6MSwidXNlcm5hbWUiOiJLcmlrZXQifQ.GaBqZdNyvhOlxeXhHSjW2CUvqMxs5Kd_P4dcASMEDqo
 @token2 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Njk1OTY5MjAsInVzZXJJZCI6MywidXNlcm5hbWUiOiJ1c2VyMiJ9.gNnyAgDyNVgXum60VC8ZIbZnsC1FHc44LsVdR0WfSdw
 ### Create user
 POST http://localhost:8080/createUser
@@ -22,7 +22,6 @@ Content-Type: application/json
 
 ### Send message
 @content = "Ahoj kamarádi"
-@channel = 1
 POST http://localhost:8080/sendMessage
 Content-Type: application/json
 Authorization: Bearer {{token}}

@@ -105,7 +105,7 @@ func ChangeUsername(id int32, username string) error {
 
 func GetUserById(id int32) (struct{ model.User }, error) {
 	slog.Info("Getting user", "id", id)
-	stmtAuthor := User.SELECT(User.AllColumns).WHERE(User.ID.EQ(postgres.Int(int64(id))))
+	stmtAuthor := User.SELECT(User.ID, User.Username).WHERE(User.ID.EQ(postgres.Int(int64(id))))
 	var dest struct {
 		model.User
 	}

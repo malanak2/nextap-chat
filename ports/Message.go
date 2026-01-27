@@ -53,7 +53,7 @@ func SelectMessageById(id int) (struct {
 	Author struct{ model.User }
 }, error) {
 	slog.Info("Selecting message", "id", id)
-	stmt := postgres.SELECT(Message.AllColumns, User.AllColumns).WHERE(Message.ID.EQ(postgres.Int(int64(id)))).FROM(Message.INNER_JOIN(UserMessage, Message.ID.EQ(UserMessage.Message)).INNER_JOIN(User, UserMessage.User.EQ(User.ID)))
+	stmt := postgres.SELECT(Message.AllColumns, User.ID, User.Username).WHERE(Message.ID.EQ(postgres.Int(int64(id)))).FROM(Message.INNER_JOIN(UserMessage, Message.ID.EQ(UserMessage.Message)).INNER_JOIN(User, UserMessage.User.EQ(User.ID)))
 
 	var destM struct {
 		model.Message
