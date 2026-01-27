@@ -15,8 +15,13 @@ import (
 func DeleteMessageById(id int32, tx *sql.Tx) error {
 	stmtDelMsg := Message.DELETE().WHERE(Message.ID.EQ(postgres.Int(int64(id))))
 	slog.Info("Deleting message", "id", id)
-	err := stmtDelMsg.Query(tx, nil)
+	var dest struct {
+	}
+	err := stmtDelMsg.Query(tx, &dest)
 	if err != nil {
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return nil
+		}
 		slog.Error("Database error deleting from Message table", "error", err.Error())
 		return err
 	}
@@ -129,7 +134,8 @@ func DeleteMessage(id int) error {
 		return ErrorDatabase
 	}
 	stmtDUM := UserMessage.DELETE().WHERE(UserMessage.Message.EQ(postgres.Int(int64(id))))
-	err = stmtDUM.Query(tx, nil)
+	var dest int
+	err = stmtDUM.Query(tx, &dest)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return errors.New("no message with this id")
@@ -139,7 +145,8 @@ func DeleteMessage(id int) error {
 		return err
 	}
 	stmt := Message.DELETE().WHERE(Message.ID.EQ(postgres.Int(int64(id))))
-	err = stmt.Query(tx, nil)
+	var dests int
+	err = stmt.Query(tx, &dests)
 	if err != nil {
 		// This REALLY shouldn`t happen since we essentially verified the message exists since it was in usermessage table and the db constraints SHOULD make sure we are fine
 		slog.Error("Error deleting from Message table", "error", err.Error(), "msgId", id)

@@ -64,6 +64,7 @@ GET http://localhost:8080/messages?page=1&limit=10
 ### Delete user
 @delId = 1
 DELETE http://localhost:8080/user/{{delId}}
+Authorization: Bearer {{token}}
 
 ### Search for user
 @searchU = a

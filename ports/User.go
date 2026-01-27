@@ -61,7 +61,7 @@ func DeleteUser(id int32) error {
 	}
 	stmt := Message.SELECT(Message.ID).WHERE(Message.UserID.EQ(postgres.Int(int64(id))))
 	var dest []struct {
-		id int
+		model.Message
 	}
 	err = stmt.Query(transaction, &dest)
 	if err != nil {
@@ -71,8 +71,9 @@ func DeleteUser(id int32) error {
 		}
 		return ErrorDatabase
 	}
+	slog.Info("Deleting messages....", "dest", dest)
 	for i := 0; i < len(dest); i++ {
-		err = DeleteMessageById(int32(dest[i].id), transaction)
+		err = DeleteMessageById(int32(dest[i].ID), transaction)
 		if err != nil {
 			transaction.Rollback()
 			slog.Error("Database error deleting from Message table", "error", err.Error())

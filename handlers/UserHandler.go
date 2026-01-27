@@ -202,7 +202,7 @@ func HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 	err = ports.DeleteUser(int32(id))
 	if err != nil {
-		http.Error(w, ErrorMarshal.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	fmt.Fprintf(w, "User with the id %d was deleted", id)
