@@ -140,7 +140,7 @@ func HandleGetUserById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	marshal, err := json.Marshal(dest.User)
+	marshal, err := json.Marshal(dest)
 	if err != nil {
 		http.Error(w, ErrorMarshal.Error(), http.StatusInternalServerError)
 		return
