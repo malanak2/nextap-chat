@@ -127,7 +127,6 @@ func MessageExists(id int) (bool, error) {
 }
 
 func DeleteMessage(id int) error {
-	slog.Info("Deleting message", "id", id)
 	tx, err := Db.Begin()
 	if err != nil {
 		slog.Error("Failed to open transaction", "error", err.Error())

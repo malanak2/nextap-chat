@@ -4,7 +4,8 @@
 # Run
 FROM golang AS builder
 WORKDIR /app
-COPY docs ./docs
+RUN go install github.com/swaggo/swag/cmd/swag@latest
+#COPY docs ./docs
 COPY domain ./domain
 COPY gen ./gen
 COPY handlers ./handlers
@@ -15,6 +16,7 @@ COPY go.mod .
 COPY main.go .
 
 RUN go mod tidy
+RUN swag init
 RUN CGO_ENABLED=0 go build .
 
 FROM alpine

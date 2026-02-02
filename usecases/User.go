@@ -5,14 +5,14 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/malanak2/nextap-chat/gen/chatdb/public/model"
+	"github.com/malanak2/nextap-chat/domain"
 	"github.com/malanak2/nextap-chat/ports"
 )
 
-func CreateUser(name, pass string) (model.User, error) {
+func CreateUser(name, pass string) (domain.User, error) {
 	user, err := ports.CreateUser(name, pass)
 	if err != nil {
-		return model.User{}, ErrorBadParameters
+		return domain.User{}, ErrorBadParameters
 	}
 	return user, nil
 }

@@ -18,8 +18,8 @@ type SendMessage struct {
 }
 
 type JwtClaims struct {
-	UserId   int    `json:"userId"`
-	Username string `json:"username"`
+	UserId   int
+	Username string
 	jwt.RegisteredClaims
 }
 
@@ -29,4 +29,9 @@ type ChangeUsername struct {
 
 type EditMessage struct {
 	Content string
+}
+
+type User struct {
+	ID       int
+	Username string
 }

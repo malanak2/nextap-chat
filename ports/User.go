@@ -6,17 +6,18 @@ import (
 	"strings"
 
 	"github.com/go-jet/jet/v2/postgres"
+	"github.com/malanak2/nextap-chat/domain"
 	"github.com/malanak2/nextap-chat/gen/chatdb/public/model"
 	. "github.com/malanak2/nextap-chat/gen/chatdb/public/table"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func CreateUser(name string, password string) (model.User, error) {
+func CreateUser(name string, password string) (domain.User, error) {
 	slog.Info("Creating user", "Username", name)
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		slog.Error("Failed to hash password", "error", err.Error(), "password", password)
-		return model.User{}, ErrorHashing
+		return domain.User{}, ErrorHashing
 	}
 	stmt := User.INSERT(User.Username, User.Password).VALUES(
 		name,
@@ -28,12 +29,12 @@ func CreateUser(name string, password string) (model.User, error) {
 	err = stmt.Query(Db, &dest)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint \"User_username_key\"") {
-			return model.User{}, ErrorDuplicateUsername
+			return domain.User{}, ErrorDuplicateUsername
 		}
 		slog.Error("Error inserting into User", "error", err.Error())
-		return model.User{}, ErrorDatabase
+		return domain.User{}, ErrorDatabase
 	}
-	return dest.User, nil
+	return domain.User{ID: int(dest.ID), Username: dest.Username}, nil
 }
 
 func SearchUsers(text string, limit int, pageNo int) ([]struct{ model.User }, error) {
@@ -71,7 +72,6 @@ func DeleteUser(id int32) error {
 		}
 		return ErrorDatabase
 	}
-	slog.Info("Deleting messages....", "dest", dest)
 	for i := 0; i < len(dest); i++ {
 		err = DeleteMessageById(int32(dest[i].ID), transaction)
 		if err != nil {
@@ -109,7 +109,7 @@ func ChangeUsername(id int32, username string) error {
 	return nil
 }
 
-func GetUserById(id int32) (struct{ model.User }, error) {
+func GetUserById(id int32) (domain.User, error) {
 	slog.Info("Getting user", "id", id)
 	stmtAuthor := User.SELECT(User.ID, User.Username).WHERE(User.ID.EQ(postgres.Int(int64(id))))
 	var dest struct {
@@ -118,12 +118,12 @@ func GetUserById(id int32) (struct{ model.User }, error) {
 	err := stmtAuthor.Query(Db, &dest)
 	if err != nil {
 		slog.Error("Database error getting user", "error", err.Error())
-		return struct{ model.User }{}, ErrorDatabase
+		return domain.User{}, ErrorDatabase
 	}
-	return dest, nil
+	return domain.User{ID: int(dest.ID), Username: dest.Username}, nil
 }
 
-func UserLogin(username, password string) (model.User, error) {
+func UserLogin(username, password string) (domain.User, error) {
 	slog.Info("User login", "username", username)
 	stmt := User.SELECT(User.AllColumns).FROM(User).WHERE(postgres.AND(User.Username.EQ(postgres.Text(username))))
 	var dest struct {
@@ -131,22 +131,26 @@ func UserLogin(username, password string) (model.User, error) {
 	}
 	err := stmt.Query(Db, &dest)
 	if err != nil {
-		return model.User{}, ErrorBadCredentials
+		return domain.User{}, ErrorBadCredentials
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(dest.Password), []byte(password))
 	if err != nil {
-		return model.User{}, ErrorBadCredentials
+		return domain.User{}, ErrorBadCredentials
 	}
-	return dest.User, nil
+	return domain.User{ID: int(dest.ID), Username: dest.Username}, nil
 }
 
-func GetAllUsers(limit int, pageNo int) ([]struct{ model.User }, error) {
+func GetAllUsers(limit int, pageNo int) ([]domain.User, error) {
 	stmt := User.SELECT(User.ID, User.Username).FROM(User).LIMIT(int64(limit)).OFFSET(int64((pageNo - 1) * limit))
 	var dest []struct {
 		model.User
 	}
 	err := stmt.Query(Db, &dest)
-	return dest, err
+	var ret []domain.User
+	for _, v := range dest {
+		ret = append(ret, domain.User{ID: int(v.ID), Username: v.Username})
+	}
+	return ret, err
 }
 
 func UserExists(uid int) (bool, error) {

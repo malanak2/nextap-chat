@@ -49,7 +49,7 @@ func HandleGetAllUsers(w http.ResponseWriter, r *http.Request) {
 // @Tags				user, auth
 // @Accept				json
 // @Produce				json
-// @Success				200 {object}	model.User
+// @Success				200 {object}	domain.User
 // @Failure				400 {object}	string
 // @Failure				500 {object}	string
 // @Router				/createUser [post]
@@ -76,7 +76,7 @@ func HandleUserCreate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	marshal, err := json.Marshal(user.ID)
+	marshal, err := json.Marshal(user)
 	if err != nil {
 		http.Error(w, ErrorMarshal.Error(), http.StatusInternalServerError)
 		return

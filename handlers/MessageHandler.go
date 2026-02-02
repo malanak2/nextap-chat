@@ -114,7 +114,7 @@ func HandleGetMessagesByUserId(w http.ResponseWriter, r *http.Request) {
 	marshal, err := json.Marshal(destM)
 	if err != nil {
 		slog.Error("Failed to marshal Message", "error", destM)
-		http.Error(w, "Failed to marshal result.", http.StatusInternalServerError)
+		http.Error(w, ErrorMarshal.Error(), http.StatusInternalServerError)
 		return
 	}
 	fmt.Fprintf(w, "%s", marshal)
@@ -207,14 +207,14 @@ func HandleSearchMessages(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	text, err := url.QueryUnescape(vars["txt"])
 	if err != nil {
-		http.Error(w, "Invalid text", http.StatusBadRequest)
+		http.Error(w, ErrorInvalidParameters.Error(), http.StatusBadRequest)
 		return
 	}
 
 	msgs, err := ports.SelectMessagesByContent(text, limit, page)
 	marshal, err := json.Marshal(msgs)
 	if err != nil {
-		http.Error(w, `Failed to marshal message[]`, http.StatusInternalServerError)
+		http.Error(w, ErrorMarshal.Error(), http.StatusInternalServerError)
 		return
 	}
 	fmt.Fprintf(w, "%s", marshal)
