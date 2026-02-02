@@ -35,3 +35,13 @@ type User struct {
 	ID       int
 	Username string
 }
+
+type Message struct {
+	ID      int
+	Content string
+}
+
+type MessageWithAuthor struct {
+	Message
+	Author User
+}

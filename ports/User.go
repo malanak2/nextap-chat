@@ -1,7 +1,6 @@
 package ports
 
 import (
-	"errors"
 	"log/slog"
 	"strings"
 
@@ -161,7 +160,7 @@ func UserExists(uid int) (bool, error) {
 	err := stmtS.Query(Db, &destU)
 	if err != nil {
 		slog.Warn("User with invalid ID found - probably fine though", "error", err.Error(), "uid", uid)
-		return false, errors.New("no user with that id")
+		return false, ErrorNoResult
 	}
 	return true, nil
 }
